@@ -1,0 +1,54 @@
+{
+  "pannes": {
+    "mesPannes": {
+      "title": "My interventions",
+      "nouvellePanne": "New breakdown",
+      "empty": "No interventions yet",
+      "declarer": "Report a breakdown →",
+      "panneTitle": "Breakdown #{{id}}"
+    },
+    "resoudreModal": {
+      "errors": {
+        "confirmationRequise": "Please confirm the breakdown is resolved",
+        "resolution": "Error resolving breakdown"
+      },
+      "success": "Breakdown resolved successfully",
+      "title": "Resolve breakdown",
+      "description": "Do you confirm the breakdown is fully resolved after testing?",
+      "warning": "This action is irreversible. The asset will return to GOOD condition.",
+      "checkbox": "I confirm the breakdown is resolved",
+      "submit": {
+        "loading": "Resolving...",
+        "label": "Confirm resolution"
+      }
+    },
+    "piecesRemplacees": {
+      "errors": {
+        "selectionRequise": "Please select a part",
+        "quantiteMin": "Quantity must be at least 1",
+        "pieceNonTrouvee": "Part not found"
+      },
+      "title": "Replaced parts",
+      "ajouter": "Add a part",
+      "empty": "No parts recorded",
+      "emptyAction": "Add parts",
+      "table": {
+        "reference": "Reference",
+        "designation": "Designation",
+        "quantite": "Quantity",
+        "prixUnitaire": "Unit price",
+        "total": "Total",
+        "action": "Action",
+        "totalGeneral": "Grand total:"
+      },
+      "supprimerAria": "Delete",
+      "modal": {
+        "title": "Add a part",
+        "piece": "Part *",
+        "piecePlaceholder": "Select a part",
+        "quantite": "Quantity *",
+        "ajouter": "Add"
+      }
+    }
+  }
+}

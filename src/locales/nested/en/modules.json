@@ -1,0 +1,246 @@
+{
+  "mouvements": {
+    "nouveau": {
+      "title": "New movement",
+      "bienNotFound": "Asset not found",
+      "requiredFields": "Please fill in all required fields",
+      "responsableRequired": "Exit responsible is required for disposal or removal",
+      "createError": "Error creating movement",
+      "searchPlaceholder": "Search by brand, model or ID...",
+      "raisonPlaceholder": "E.g. Transfer to new site...",
+      "sourcePlaceholder": "E.g. Warehouse A",
+      "destPlaceholder": "E.g. Rutshuru site",
+      "piecePlaceholder": "E.g. Exit voucher no....",
+      "typeTransfert": "Location change",
+      "typeSortie": "Temporary removal from fleet",
+      "typeCession": "Sale or donation (retirement)",
+      "typeAffectation": "Assignment to user",
+      "typeRetour": "Return to fleet after removal"
+    },
+    "liste": {
+      "loading": "Loading movements...",
+      "loadError": "Unable to load movements",
+      "title": "Asset movements",
+      "subtitle": "Tracking transfers, disposals and assignments",
+      "empty": "No movements found"
+    },
+    "historique": {
+      "loading": "Loading history...",
+      "loadError": "Unable to load history",
+      "empty": "No movements recorded for this asset",
+      "insufficientPerms": "Insufficient permissions"
+    },
+    "fiche": {
+      "loading": "Loading...",
+      "loadError": "Unable to load movement details"
+    }
+  },
+  "besoins": {
+    "nouveau": {
+      "createError": "Error creating request",
+      "noPiece": "No part selected",
+      "none": "None"
+    },
+    "fiche": {
+      "validateError": "Error validating",
+      "printError": "Error generating PDF"
+    },
+    "attenteStock": {
+      "loading": "Loading...",
+      "title": "Needs awaiting stock",
+      "subtitle": "Approved requests blocked by part shortage",
+      "empty": "No needs awaiting stock"
+    }
+  },
+  "validations": {
+    "fiche": {
+      "validateError": "Error validating"
+    },
+    "historique": {
+      "empty": "No history found"
+    }
+  },
+  "fournitures": {
+    "attente": {
+      "title": "Pending supplies",
+      "subtitle": "Supply requests to process",
+      "subtitleCount": "{{count}} pending request(s)",
+      "searchPlaceholder": "Search by need number...",
+      "perPage": "{{n}} / page",
+      "refreshList": "Refresh list",
+      "empty": "No pending supply request",
+      "emptyHint": "New requests will appear here automatically.",
+      "colBesoin": "Need No.",
+      "colDate": "Created on",
+      "colPiece": "Part",
+      "colQty": "Qty requested",
+      "pieceLine": "Part #{{id}}",
+      "process": "Process",
+      "processAria": "Process supply {{id}}"
+    }
+  },
+  "cessions": {
+    "cession": {
+      "title": "Asset disposal"
+    },
+    "rebut": {
+      "title": "Asset scrapping"
+    }
+  },
+  "rapports": {
+    "financiers": {
+      "loading": "Loading report...",
+      "loadError": "Error loading data",
+      "title": "Financial Report",
+      "subtitle": "Financial analysis of assets, breakdowns, maintenance and depreciation"
+    },
+    "techniques": {
+      "loading": "Loading report...",
+      "title": "Technical Report",
+      "subtitle": "Technical analysis of the asset fleet"
+    },
+    "amortissements": {
+      "loading": "Loading report...",
+      "title": "Depreciation Report",
+      "subtitle": "Depreciation summary and tax differences"
+    }
+  },
+  "composants": {
+    "list": {
+      "title": "Asset components",
+      "subtitle": "OHADA breakdown for differentiated depreciation"
+    }
+  },
+  "depreciations": {
+    "history": {
+      "loading": "Loading history...",
+      "title": "Impairment history",
+      "empty": "No impairments recorded",
+      "appliedTitle": "Applied impairments",
+      "reprisesTitle": "Reversals completed",
+      "repriseAction": "Reverse an impairment",
+      "repriseBtn": "Reverse",
+      "cumulLabel": "Cumulative impairment:",
+      "ohadaHint": "OHADA accounts: Debit 2944 / Credit 7914. Available cumulative: {{amount}}"
+    },
+    "reprise": {
+      "title": "Impairment reversal",
+      "success": "Reversal recorded. Entry {{debit}}/{{credit}}. New cumulative: {{cumul}}",
+      "amountLabel": "Amount to reverse (FCFA) *",
+      "motifLabel": "Reason *",
+      "motifPlaceholder": "Reason for reversal...",
+      "confirmBtn": "Confirm reversal",
+      "errorAmountPositive": "Amount must be greater than 0",
+      "errorAmountMax": "Amount cannot exceed {{max}}",
+      "errorMotif": "A reason of at least 3 characters is required",
+      "errorGeneric": "Error during reversal"
+    }
+  },
+  "profil": {
+    "title": "My profile",
+    "back": "← Back",
+    "updateSuccess": "Profile updated successfully!",
+    "updateError": "Error updating profile",
+    "oldPasswordRequired": "Please enter your current password",
+    "newPasswordRequired": "Please enter a new password",
+    "passwordMismatch": "New passwords do not match",
+    "passwordMinLength": "Password must be at least 6 characters",
+    "passwordSame": "New password must be different from current password",
+    "passwordSuccess": "Password changed successfully!",
+    "passwordError": "Error changing password",
+    "personalInfo": "Personal information",
+    "edit": "Edit",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "phone": "Phone",
+    "email": "Email",
+    "emailReadonly": "Email cannot be changed",
+    "saving": "Saving...",
+    "save": "Save",
+    "fullName": "First and last name:",
+    "phoneLabel": "Phone:",
+    "emailLabel": "Email:",
+    "lastLogin": "Last login:",
+    "firstLogin": "First login",
+    "security": "Security",
+    "changePassword": "Change password →",
+    "oldPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "passwordMinHint": "Minimum 6 characters",
+    "changing": "Changing...",
+    "changePasswordBtn": "Change password"
+  },
+  "audit": {
+    "journal": {
+      "loading": "Loading audit log...",
+      "title": "Audit log",
+      "subtitle": "Traceability of all system actions",
+      "tablePlaceholder": "Table (assets, breakdowns...)",
+      "allActions": "All actions",
+      "colDate": "Date",
+      "colUser": "User",
+      "colTable": "Table",
+      "colAction": "Action",
+      "colDetails": "Details",
+      "system": "System",
+      "details": "Details",
+      "history": "History"
+    }
+  },
+  "ia": {
+    "aideDecision": {
+      "bienNotFound": "Asset with ID {{id}} not found",
+      "noAnalysis": "No strategic analysis available for this asset",
+      "scoreError": "Error calculating score",
+      "title": "Decision support",
+      "subtitle": "AI analysis of the asset fleet"
+    },
+    "alertesAchat": {
+      "title": "Purchase alerts",
+      "subtitle": "AI-based purchase recommendations"
+    },
+    "widget": {
+      "title": "AI Recommendations",
+      "seeMore": "View full analysis →",
+      "seeAll": "View all",
+      "loadError": "Error loading AI recommendations.",
+      "noUrgentAction": "No urgent action",
+      "allHealthy": "All assets and stock levels are healthy",
+      "criticalAssets": "Critical assets (Top 3)",
+      "stockAlerts": "Stock alerts (Top 3)",
+      "score": "Score:",
+      "stock": "Stock:",
+      "required": "Required:",
+      "viewDetail": "View details",
+      "planAction": "Plan action",
+      "addToNeed": "Add to need",
+      "noCriticalAsset": "No critical asset detected.",
+      "noStockAlert": "No urgent stock alert."
+    }
+  },
+  "biens": {
+    "edit": {
+      "title": "Edit asset",
+      "loadError": "Unable to load asset",
+      "saveSuccess": "Asset updated successfully",
+      "saveError": "Error updating asset"
+    },
+    "nouveau": {
+      "title": "New asset",
+      "pageTitle": "Add asset",
+      "createSuccess": "Asset created successfully",
+      "createError": "Error creating asset",
+      "steps": {
+        "general": "General information",
+        "specific": "Specific characteristics",
+        "confirm": "Confirmation"
+      }
+    },
+    "qrView": {
+      "title": "Asset QR Code",
+      "loading": "Loading QR code...",
+      "error": "Error loading QR code"
+    }
+  }
+}

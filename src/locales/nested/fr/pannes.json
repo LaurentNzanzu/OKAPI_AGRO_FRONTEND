@@ -1,0 +1,54 @@
+{
+  "pannes": {
+    "mesPannes": {
+      "title": "Mes interventions",
+      "nouvellePanne": "Nouvelle panne",
+      "empty": "Aucune intervention pour le moment",
+      "declarer": "Déclarer une panne →",
+      "panneTitle": "Panne #{{id}}"
+    },
+    "resoudreModal": {
+      "errors": {
+        "confirmationRequise": "Veuillez confirmer que la panne est résolue",
+        "resolution": "Erreur lors de la résolution"
+      },
+      "success": "Panne résolue avec succès",
+      "title": "Résoudre la panne",
+      "description": "Confirmez-vous que la panne est complètement résolue après les tests ?",
+      "warning": "Cette action est irréversible. Le bien repassera en état BON.",
+      "checkbox": "Je confirme que la panne est résolue",
+      "submit": {
+        "loading": "Résolution...",
+        "label": "Confirmer la résolution"
+      }
+    },
+    "piecesRemplacees": {
+      "errors": {
+        "selectionRequise": "Veuillez sélectionner une pièce",
+        "quantiteMin": "La quantité doit être au moins 1",
+        "pieceNonTrouvee": "Pièce non trouvée"
+      },
+      "title": "Pièces remplacées",
+      "ajouter": "Ajouter une pièce",
+      "empty": "Aucune pièce enregistrée",
+      "emptyAction": "Ajouter des pièces",
+      "table": {
+        "reference": "Référence",
+        "designation": "Désignation",
+        "quantite": "Quantité",
+        "prixUnitaire": "Prix unitaire",
+        "total": "Total",
+        "action": "Action",
+        "totalGeneral": "Total général:"
+      },
+      "supprimerAria": "Supprimer",
+      "modal": {
+        "title": "Ajouter une pièce",
+        "piece": "Pièce *",
+        "piecePlaceholder": "Sélectionner une pièce",
+        "quantite": "Quantité *",
+        "ajouter": "Ajouter"
+      }
+    }
+  }
+}

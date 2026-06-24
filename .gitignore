@@ -1,0 +1,117 @@
+# ============================================================
+# FRONTEND - React / Node.js
+# ============================================================
+
+# ------------------------------------
+# Dépendances
+# ------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ------------------------------------
+# Dossiers de build
+# ------------------------------------
+dist/
+build/
+.out/
+.next/
+.nuxt/
+.cache/
+
+# ------------------------------------
+# Variables d'environnement
+# ------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.env.local
+
+# ------------------------------------
+# Fichiers de logs
+# ------------------------------------
+logs/
+*.log
+*.pid
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ------------------------------------
+# Fichiers d'IDE / éditeurs
+# ------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ------------------------------------
+# Cache des gestionnaires de paquets
+# ------------------------------------
+.eslintcache
+.stylelintcache
+.prettiercache
+.vercel/
+/.cache/
+
+# ------------------------------------
+# Dossiers de tests
+# ------------------------------------
+coverage/
+.nyc_output/
+cypress/videos/
+cypress/screenshots/
+
+# ------------------------------------
+# Fichiers de rapports / exports
+# ------------------------------------
+reports/
+export/
+*.csv
+*.xlsx
+*.pdf
+
+# ------------------------------------
+# Fichiers de configuration locaux
+# ------------------------------------
+*.local.js
+*.local.json
+*.local.ts
+*.local.tsx
+
+# ------------------------------------
+# Fichiers d'upload / médias (si le front gère des fichiers)
+# ------------------------------------
+public/uploads/
+uploads/
+media/
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# ------------------------------------
+# Fichiers temporaires
+# ------------------------------------
+*.tmp
+*.temp
+*.bak
+
+# ------------------------------------
+# Fichiers spécifiques à certains outils
+# ------------------------------------
+# https://git-scm.com/docs/gitignore
+*.exe
+*.dll
+*.so
+*.dylib

@@ -1,0 +1,54 @@
+{
+  "ui": {
+    "icons": {
+      "maintenanceType": {
+        "preventive": "Preventive",
+        "corrective": "Corrective",
+        "predictive": "Predictive"
+      },
+      "maintenanceStatut": {
+        "planifiee": "Scheduled",
+        "enCours": "In progress",
+        "terminee": "Completed",
+        "reportee": "Postponed",
+        "annulee": "Cancelled"
+      },
+      "panneStatut": {
+        "declaree": "Reported",
+        "diagnostiquee": "Diagnosed",
+        "enAttentePieces": "Awaiting parts",
+        "enValidation": "Pending validation",
+        "enCours": "In progress",
+        "enTest": "Testing",
+        "terminee": "Completed",
+        "annulee": "Cancelled"
+      },
+      "panneType": {
+        "mecanique": "Mechanical",
+        "electrique": "Electrical",
+        "electronique": "Electronic",
+        "logicielle": "Software",
+        "structurelle": "Structural",
+        "autre": "Other"
+      },
+      "pannePriorite": {
+        "basse": "Low",
+        "moyenne": "Medium",
+        "haute": "High",
+        "critique": "Critical"
+      },
+      "mouvementType": {
+        "transfert": "Transfer",
+        "sortie": "Removal",
+        "cession": "Disposal",
+        "affectation": "Assignment",
+        "retour": "Return"
+      },
+      "pieceCompat": {
+        "vehicule": "Vehicle",
+        "ordinateur": "Computer",
+        "machineProduction": "Production machine"
+      }
+    }
+  }
+}

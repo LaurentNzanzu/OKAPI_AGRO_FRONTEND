@@ -1,0 +1,54 @@
+{
+  "ui": {
+    "icons": {
+      "maintenanceType": {
+        "preventive": "Préventive",
+        "corrective": "Corrective",
+        "predictive": "Prédictive"
+      },
+      "maintenanceStatut": {
+        "planifiee": "Planifiée",
+        "enCours": "En cours",
+        "terminee": "Terminée",
+        "reportee": "Reportée",
+        "annulee": "Annulée"
+      },
+      "panneStatut": {
+        "declaree": "Déclarée",
+        "diagnostiquee": "Diagnostiquée",
+        "enAttentePieces": "Attente pièces",
+        "enValidation": "En validation",
+        "enCours": "En cours",
+        "enTest": "En test",
+        "terminee": "Terminée",
+        "annulee": "Annulée"
+      },
+      "panneType": {
+        "mecanique": "Mécanique",
+        "electrique": "Électrique",
+        "electronique": "Électronique",
+        "logicielle": "Logicielle",
+        "structurelle": "Structurelle",
+        "autre": "Autre"
+      },
+      "pannePriorite": {
+        "basse": "Basse",
+        "moyenne": "Moyenne",
+        "haute": "Haute",
+        "critique": "Critique"
+      },
+      "mouvementType": {
+        "transfert": "Transfert",
+        "sortie": "Sortie",
+        "cession": "Cession",
+        "affectation": "Affectation",
+        "retour": "Retour"
+      },
+      "pieceCompat": {
+        "vehicule": "Véhicule",
+        "ordinateur": "Ordinateur",
+        "machineProduction": "Machine de production"
+      }
+    }
+  }
+}

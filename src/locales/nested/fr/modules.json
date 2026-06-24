@@ -1,0 +1,246 @@
+{
+  "mouvements": {
+    "nouveau": {
+      "title": "Nouveau mouvement",
+      "bienNotFound": "Bien non trouvé",
+      "requiredFields": "Veuillez remplir tous les champs obligatoires",
+      "responsableRequired": "Le responsable de sortie est obligatoire pour une cession ou sortie",
+      "createError": "Erreur lors de la création du mouvement",
+      "searchPlaceholder": "Rechercher par marque, modèle ou ID...",
+      "raisonPlaceholder": "Ex: Transfert vers nouveau site...",
+      "sourcePlaceholder": "Ex: Entrepôt A",
+      "destPlaceholder": "Ex: Site Rutshuru",
+      "piecePlaceholder": "Ex: Bon de sortie n°...",
+      "typeTransfert": "Changement de localisation",
+      "typeSortie": "Sortie temporaire du parc",
+      "typeCession": "Vente ou donation (réforme)",
+      "typeAffectation": "Attribution à un utilisateur",
+      "typeRetour": "Retour au parc après sortie"
+    },
+    "liste": {
+      "loading": "Chargement des mouvements...",
+      "loadError": "Impossible de charger les mouvements",
+      "title": "Mouvements des biens",
+      "subtitle": "Traçabilité des transferts, cessions et affectations",
+      "empty": "Aucun mouvement trouvé"
+    },
+    "historique": {
+      "loading": "Chargement de l'historique...",
+      "loadError": "Impossible de charger l'historique",
+      "empty": "Aucun mouvement enregistré pour ce bien",
+      "insufficientPerms": "Permissions insuffisantes"
+    },
+    "fiche": {
+      "loading": "Chargement...",
+      "loadError": "Impossible de charger les détails du mouvement"
+    }
+  },
+  "besoins": {
+    "nouveau": {
+      "createError": "Erreur lors de la création",
+      "noPiece": "Aucune pièce sélectionnée",
+      "none": "Aucune"
+    },
+    "fiche": {
+      "validateError": "Erreur lors de la validation",
+      "printError": "Erreur lors de la génération du PDF"
+    },
+    "attenteStock": {
+      "loading": "Chargement...",
+      "title": "Besoins en attente de stock",
+      "subtitle": "Besoins approuvés bloqués par manque de pièces",
+      "empty": "Aucun besoin en attente de stock"
+    }
+  },
+  "validations": {
+    "fiche": {
+      "validateError": "Erreur lors de la validation"
+    },
+    "historique": {
+      "empty": "Aucun historique trouvé"
+    }
+  },
+  "fournitures": {
+    "attente": {
+      "title": "Fournitures en attente",
+      "subtitle": "Demandes de fournitures à traiter",
+      "subtitleCount": "{{count}} demande(s) en attente",
+      "searchPlaceholder": "Rechercher par n° besoin...",
+      "perPage": "{{n}} / page",
+      "refreshList": "Actualiser la liste",
+      "empty": "Aucune demande de fourniture en attente",
+      "emptyHint": "Les nouvelles demandes apparaîtront ici automatiquement.",
+      "colBesoin": "N° besoin",
+      "colDate": "Date création",
+      "colPiece": "Pièce",
+      "colQty": "Qté demandée",
+      "pieceLine": "Pièce #{{id}}",
+      "process": "Traiter",
+      "processAria": "Traiter fourniture {{id}}"
+    }
+  },
+  "cessions": {
+    "cession": {
+      "title": "Cession du bien"
+    },
+    "rebut": {
+      "title": "Mise au rebut"
+    }
+  },
+  "rapports": {
+    "financiers": {
+      "loading": "Chargement du rapport...",
+      "loadError": "Erreur lors du chargement des données",
+      "title": "Rapport Financier",
+      "subtitle": "Analyse financière des biens, pannes, maintenances et amortissements"
+    },
+    "techniques": {
+      "loading": "Chargement du rapport...",
+      "title": "Rapport Technique",
+      "subtitle": "Analyse technique du parc immobilier"
+    },
+    "amortissements": {
+      "loading": "Chargement du rapport...",
+      "title": "Rapport Amortissements",
+      "subtitle": "Synthèse des amortissements et écarts fiscaux"
+    }
+  },
+  "composants": {
+    "list": {
+      "title": "Composants du bien",
+      "subtitle": "Décomposition OHADA pour amortissement différencié"
+    }
+  },
+  "depreciations": {
+    "history": {
+      "loading": "Chargement de l'historique...",
+      "title": "Historique des dépréciations",
+      "empty": "Aucune dépréciation enregistrée",
+      "appliedTitle": "Dépréciations appliquées",
+      "reprisesTitle": "Reprises effectuées",
+      "repriseAction": "Reprendre une dépréciation",
+      "repriseBtn": "Reprendre",
+      "cumulLabel": "Cumul dépréciation :",
+      "ohadaHint": "Comptes OHADA : Débit 2944 / Crédit 7914. Cumul disponible : {{amount}}"
+    },
+    "reprise": {
+      "title": "Reprise de dépréciation",
+      "success": "Reprise enregistrée. Écriture {{debit}}/{{credit}}. Nouveau cumul : {{cumul}}",
+      "amountLabel": "Montant à reprendre (FCFA) *",
+      "motifLabel": "Motif *",
+      "motifPlaceholder": "Raison de la reprise...",
+      "confirmBtn": "Confirmer la reprise",
+      "errorAmountPositive": "Le montant doit être supérieur à 0",
+      "errorAmountMax": "Le montant ne peut pas dépasser {{max}}",
+      "errorMotif": "Un motif d'au moins 3 caractères est obligatoire",
+      "errorGeneric": "Erreur lors de la reprise"
+    }
+  },
+  "profil": {
+    "title": "Mon profil",
+    "back": "← Retour",
+    "updateSuccess": "Profil mis à jour avec succès !",
+    "updateError": "Erreur lors de la mise à jour",
+    "oldPasswordRequired": "Veuillez entrer votre ancien mot de passe",
+    "newPasswordRequired": "Veuillez entrer un nouveau mot de passe",
+    "passwordMismatch": "Les nouveaux mots de passe ne correspondent pas",
+    "passwordMinLength": "Le mot de passe doit contenir au moins 6 caractères",
+    "passwordSame": "Le nouveau mot de passe doit être différent de l'ancien",
+    "passwordSuccess": "Mot de passe modifié avec succès !",
+    "passwordError": "Erreur lors du changement de mot de passe",
+    "personalInfo": "Informations personnelles",
+    "edit": "Modifier",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "phone": "Téléphone",
+    "email": "Email",
+    "emailReadonly": "L'email ne peut pas être modifié",
+    "saving": "Enregistrement...",
+    "save": "Enregistrer",
+    "fullName": "Prénom et Nom :",
+    "phoneLabel": "Téléphone :",
+    "emailLabel": "Email :",
+    "lastLogin": "Dernière connexion :",
+    "firstLogin": "Première connexion",
+    "security": "Sécurité",
+    "changePassword": "Changer le mot de passe →",
+    "oldPassword": "Ancien mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le nouveau mot de passe",
+    "passwordMinHint": "Minimum 6 caractères",
+    "changing": "Changement...",
+    "changePasswordBtn": "Changer le mot de passe"
+  },
+  "audit": {
+    "journal": {
+      "loading": "Chargement du journal d'audit...",
+      "title": "Journal d'audit",
+      "subtitle": "Traçabilité de toutes les actions du système",
+      "tablePlaceholder": "Table (biens, pannes...)",
+      "allActions": "Toutes actions",
+      "colDate": "Date",
+      "colUser": "Utilisateur",
+      "colTable": "Table",
+      "colAction": "Action",
+      "colDetails": "Détails",
+      "system": "Système",
+      "details": "Détails",
+      "history": "Historique"
+    }
+  },
+  "ia": {
+    "aideDecision": {
+      "bienNotFound": "Bien avec l'ID {{id}} non trouvé",
+      "noAnalysis": "Aucune analyse stratégique disponible pour ce bien",
+      "scoreError": "Erreur lors du calcul du score",
+      "title": "Aide à la décision",
+      "subtitle": "Analyse IA du parc immobilier"
+    },
+    "alertesAchat": {
+      "title": "Alertes d'achat",
+      "subtitle": "Recommandations d'achat basées sur l'IA"
+    },
+    "widget": {
+      "title": "Recommandations IA",
+      "seeMore": "Voir l'analyse complète →",
+      "seeAll": "Voir tout",
+      "loadError": "Erreur lors du chargement des recommandations IA.",
+      "noUrgentAction": "Aucune action urgente",
+      "allHealthy": "Tous les biens et stocks sont sains",
+      "criticalAssets": "Biens critiques (Top 3)",
+      "stockAlerts": "Alertes stock (Top 3)",
+      "score": "Score:",
+      "stock": "Stock:",
+      "required": "Requis:",
+      "viewDetail": "Voir détail",
+      "planAction": "Planifier action",
+      "addToNeed": "Ajouter au besoin",
+      "noCriticalAsset": "Aucun bien critique détecté.",
+      "noStockAlert": "Aucune alerte de stock urgente."
+    }
+  },
+  "biens": {
+    "edit": {
+      "title": "Modifier le bien",
+      "loadError": "Impossible de charger le bien",
+      "saveSuccess": "Bien modifié avec succès",
+      "saveError": "Erreur lors de la modification"
+    },
+    "nouveau": {
+      "title": "Nouveau bien",
+      "pageTitle": "Ajouter un bien",
+      "createSuccess": "Bien créé avec succès",
+      "createError": "Erreur lors de la création",
+      "steps": {
+        "general": "Informations générales",
+        "specific": "Caractéristiques spécifiques",
+        "confirm": "Confirmation"
+      }
+    },
+    "qrView": {
+      "title": "QR Code du bien",
+      "loading": "Chargement du QR code...",
+      "error": "Erreur de chargement du QR code"
+    }
+  }
+}
