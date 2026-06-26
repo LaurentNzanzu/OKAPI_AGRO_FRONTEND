@@ -16,28 +16,36 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+
           script: |
             set -e
 
-            echo "Go to frontend folder..."
+            echo "🚀 Starting frontend deployment..."
+
             cd /var/www/frontend
 
-            echo "Pull latest frontend code..."
+            echo "📥 Pull latest frontend code..."
             git pull origin main
 
-            echo "Install dependencies..."
+            echo "📦 Install dependencies..."
             npm install --legacy-peer-deps
 
-            echo "Create production environment file..."
+            echo "⚙️ Create production environment..."
             cat > .env << 'EOF'
             VITE_API_URL=https://api.tbcgroupe.me/api/v1
             EOF
 
-            echo "Build frontend..."
+            echo "🧹 Clean old build..."
+            rm -rf dist
+
+            echo "🏗️ Build frontend..."
             NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
-            echo "Restart Nginx..."
+            echo "🔄 Restart Nginx..."
             sudo systemctl restart nginx
 
-            echo "Frontend deployed successfully."
-          
+            echo "⏳ Health check..."
+            curl -f http://localhost || true
+
+            echo "✅ Frontend deployed successfully!"
