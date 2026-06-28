@@ -1,3 +1,4 @@
+// frontend/src/components/prints/PrintInventaireBiens.jsx
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import PrintHeader from '../common/PrintHeader';
@@ -24,6 +25,14 @@ const formatAmount = (value) => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(num);
+};
+
+// 🔥 Fonction pour extraire le nom de la localisation
+const getLocalisationName = (loc) => {
+  if (typeof loc === 'object' && loc !== null) {
+    return loc.nom_localisation || '—';
+  }
+  return loc || '—';
 };
 
 const PrintInventaireBiens = ({ biens = [], onClose }) => {
@@ -66,14 +75,12 @@ const PrintInventaireBiens = ({ biens = [], onClose }) => {
 
   const content = (
     <>
-      {/* Fond assombri — masqué à l'impression (ne doit PAS envelopper .print-area) */}
       <div
         className="no-print fixed inset-0 z-[9998] bg-black/60 backdrop-blur-[1px]"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Document imprimable — centré à l'écran, hors de tout parent .no-print */}
       <div
         className="print-area print-inventaire-modal fixed left-1/2 top-1/2 z-[9999] w-[calc(100%-2rem)] max-w-4xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto bg-white rounded-xl shadow-2xl p-6 sm:p-8 text-gray-900"
         style={printPageStyle}
@@ -143,7 +150,8 @@ const PrintInventaireBiens = ({ biens = [], onClose }) => {
                   : '—',
                 valeur: formatAmount(bien.prix_acquisition),
                 etat: getEtatLabel(bien.etat) || bien.etat || '—',
-                localisation: bien.localisation || '—',
+                // 🔥 CORRECTION : Utiliser getLocalisationName pour extraire le nom
+                localisation: getLocalisationName(bien.localisation),
               }))}
               footer={
                 <tr className="bg-gray-50 font-semibold">

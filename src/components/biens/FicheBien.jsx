@@ -34,12 +34,120 @@ import CessionBien from '../cessions/CessionBien';
 import RebutBien from '../cessions/RebutBien';
 import DepreciationHistory from '../depreciations/DepreciationHistory';
 import etatsService from '../../services/etats';
+// ✅ Remplacer l'import défectueux par le composant local (défini dans ce fichier)
+// import CessionEligibilitySection from './FicheImmobilisation';  // ❌ À SUPPRIMER
+import CessionModal from '../cessions/CessionModal';
 
 // Helper pour vérifier si une valeur est valide
 const hasValidValue = (value) => {
     return value !== null && value !== undefined && value !== '' && value !== '-';
 };
 
+// ============================================================
+// ✅ COMPOSANT CessionEligibilitySection (intégré localement)
+// ============================================================
+const CessionEligibilitySection = ({ bienId, onCessionClick }) => {
+    const { t } = useTranslation();
+    const [loading, setLoading] = useState(false);
+    const [eligibilite, setEligibilite] = useState(null);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchEligibilite = async () => {
+            if (!bienId) return;
+            try {
+                setLoading(true);
+                const response = await biensService.verifierEligibiliteCession(bienId);
+                setEligibilite(response);
+            } catch (err) {
+                setError(err.response?.data?.detail || err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchEligibilite();
+    }, [bienId]);
+
+    if (loading) {
+        return (
+            <Paper sx={{ p: 2, textAlign: 'center' }}>
+                <CircularProgress size={24} />
+                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    {t('common.loading')}
+                </Typography>
+            </Paper>
+        );
+    }
+
+    if (error) {
+        return (
+            <Paper sx={{ p: 2 }}>
+                <Alert severity="error" variant="outlined" size="small">
+                    {error}
+                </Alert>
+            </Paper>
+        );
+    }
+
+    if (!eligibilite) return null;
+
+    const { est_eligible, motifs_ineligibilite, recommandation } = eligibilite;
+
+    return (
+        <Paper sx={{ p: 2, mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box>
+                    <Typography variant="subtitle2" gutterBottom>
+                        {t('assets.cessionEligibility')}
+                    </Typography>
+                    {est_eligible ? (
+                        <Chip
+                            label={t('assets.eligible')}
+                            color="success"
+                            size="small"
+                            icon={<CheckCircle fontSize="small" />}
+                        />
+                    ) : (
+                        <Chip
+                            label={t('assets.notEligible')}
+                            color="error"
+                            size="small"
+                            icon={<Warning fontSize="small" />}
+                        />
+                    )}
+                    {!est_eligible && motifs_ineligibilite && motifs_ineligibilite.length > 0 && (
+                        <Box sx={{ mt: 1 }}>
+                            {motifs_ineligibilite.map((motif, idx) => (
+                                <Typography key={idx} variant="caption" display="block" color="text.secondary">
+                                    • {motif}
+                                </Typography>
+                            ))}
+                        </Box>
+                    )}
+                    {recommandation && (
+                        <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+                            {recommandation}
+                        </Typography>
+                    )}
+                </Box>
+                {est_eligible && (
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        size="small"
+                        onClick={onCessionClick}
+                    >
+                        {t('assets.initiateCession')}
+                    </Button>
+                )}
+            </Box>
+        </Paper>
+    );
+};
+
+// ============================================================
+// ✅ COMPOSANT PRINCIPAL FicheBien
+// ============================================================
 const FicheBien = () => {
     const { t, lang } = useTranslation();
     const { id } = useParams();
@@ -54,7 +162,7 @@ const FicheBien = () => {
         isTechnicianMode,
     } = usePermissions();
     const { fetchBienForContext } = useBienAccess();
-    
+
     const [bien, setBien] = useState(null);
     const [loading, setLoading] = useState(true);
     const [printing, setPrinting] = useState(false);
@@ -62,7 +170,7 @@ const FicheBien = () => {
     const [activeTab, setActiveTab] = useState(0);
     const [qrDialogOpen, setQrDialogOpen] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState({ open: false });
-    
+
     // État pour le modal d'amortissement
     const [showAmortissementModal, setShowAmortissementModal] = useState(false);
     const [amortissementSuccess, setAmortissementSuccess] = useState(false);
@@ -98,7 +206,7 @@ const FicheBien = () => {
     };
 
     const handleEdit = () => navigate(`/biens/${id}/edit`);
-    
+
     const handleDelete = async () => {
         try {
             await biensService.delete(id);
@@ -109,14 +217,14 @@ const FicheBien = () => {
     };
 
     const handleTabChange = (_, newValue) => setActiveTab(newValue);
-    
+
     // Impression via l'API backend
     const handlePrintFiche = async () => {
         if (!bien || !bien.id_bien) {
             setError(t('assets.printNoData'));
             return;
         }
-        
+
         try {
             setPrinting(true);
             await etatsService.exportFicheBien(bien.id_bien);
@@ -162,7 +270,7 @@ const FicheBien = () => {
             setAmortissementSuccess(false);
         }, 1500);
     };
-    
+
     const getEtatInfo = (etat) => {
         const apiKey = resolveEtatApiKey(etat);
         const selectValue = apiKey ? apiKey.toLowerCase() : normalizeStatusForSelect(etat);
@@ -288,506 +396,529 @@ const FicheBien = () => {
 
     return (
         <ThemeProvider theme={okapiMuiTheme}>
-        <Box sx={{ p: 3 }}>
-            {/* Modal de calcul d'amortissement */}
-            <Dialog 
-                open={showAmortissementModal} 
-                onClose={handleCloseAmortissement}
-                maxWidth="md"
-                fullWidth
-            >
-                <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
-                    {t('assets.calculateDepreciationTitle', {
-                        name: `${bien.marque || bien.fabricant} ${bien.modele}`,
-                    })}
-                </DialogTitle>
-                <DialogContent sx={{ p: 0 }}>
-                    <CalculAmortissement 
-                        bienId={parseInt(id)} 
-                        onSuccess={handleAmortissementSuccess}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseAmortissement} color="inherit">
-                        {t('assets.close')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* En-tête */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                <IconButton onClick={() => navigate('/biens')} size="small">
-                    <ArrowBack />
-                </IconButton>
-                <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="h4">
-                        {getTypeLabel(bien.type_bien)} • {bien.marque || bien.fabricant} {bien.modele}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        {t('assets.qrCodeLabel', { code: bien.qr_code })}
-                    </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                    {canCalculateAmortissement() && (
-                        <Tooltip title={t('assets.calculateDepreciation')}>
-                            <IconButton 
-                                onClick={handleOpenAmortissement} 
-                                color="primary"
-                            >
-                                <Calculate />
-                            </IconButton>
-                        </Tooltip>
-                    )}
-                    <Tooltip title={t('assets.qrCode')}>
-                        <IconButton onClick={() => setQrDialogOpen(true)} color="primary">
-                            <QrCode />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title={t('assets.previewBeforePrint')}>
-                        <IconButton onClick={handleApercuFiche} color="primary">
-                            <Visibility />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title={t('assets.downloadPdf')}>
-                        <IconButton 
-                            onClick={handlePrintFiche} 
-                            color="success"
-                            disabled={printing}
-                        >
-                            {printing ? <CircularProgress size={24} /> : <Print />}
-                        </IconButton>
-                    </Tooltip>
-                    {canEditBien && (
-                        <Tooltip title={t('common.edit')}>
-                            <IconButton onClick={handleEdit} color="info">
-                                <Edit />
-                            </IconButton>
-                        </Tooltip>
-                    )}
-                    {canDeleteBien && (
-                        <Tooltip title={t('common.delete')}>
-                            <IconButton onClick={() => setConfirmDelete({ open: true })} color="error">
-                                <Delete />
-                            </IconButton>
-                        </Tooltip>
-                    )}
-                </Box>
-            </Box>
-
-            {isTechnicianMode && (
-                <Alert severity="info" sx={{ mb: 3 }}>
-                    <strong>{t('assets.technicianModeTitle')}</strong> — {t('assets.technicianModeInfo')}
-                </Alert>
-            )}
-
-            {(bien.etat === 'PANNE' || bien.etat === 'MAINTENANCE') && (
-                <Alert
-                    severity={bien.etat === 'PANNE' ? 'error' : 'warning'}
-                    icon={bien.etat === 'PANNE' ? <Warning /> : <Build />}
-                    sx={{ mb: 3 }}
+            <Box sx={{ p: 3 }}>
+                {/* Modal de calcul d'amortissement */}
+                <Dialog
+                    open={showAmortissementModal}
+                    onClose={handleCloseAmortissement}
+                    maxWidth="md"
+                    fullWidth
                 >
-                    <strong>{bien.etat === 'PANNE' ? t('assets.statusPanne') : t('assets.statusMaintenance')}</strong>
-                    {bien.etat === 'PANNE'
-                        ? t('assets.statusPanneDesc')
-                        : t('assets.statusMaintenanceDesc')}
-                </Alert>
-            )}
+                    <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
+                        {t('assets.calculateDepreciationTitle', {
+                            name: `${bien.marque || bien.fabricant} ${bien.modele}`,
+                        })}
+                    </DialogTitle>
+                    <DialogContent sx={{ p: 0 }}>
+                        <CalculAmortissement
+                            bienId={parseInt(id)}
+                            onSuccess={handleAmortissementSuccess}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleCloseAmortissement} color="inherit">
+                            {t('assets.close')}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
 
-            <Grid container spacing={3}>
-                {/* Colonne gauche */}
-                <Grid item xs={12} lg={8}>
-                    <Paper sx={{ p: 3 }}>
-                        <Tabs key={lang} value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }} variant="scrollable" scrollButtons="auto">
-                            <Tab label={t('assets.tabInfo')} />
-                            <Tab label={t('assets.tabHistory')} />
-                            <Tab label={t('assets.tabDocuments')} />
-                            <Tab label={t('assets.tabComponents')} icon={<PieChart fontSize="small" />} iconPosition="start" />
-                            <Tab label={t('assets.tabDepreciations')} icon={<AccountBalance fontSize="small" />} iconPosition="start" />
-                            <Tab label={t('assets.tabMovements')} icon={<DirectionsCar fontSize="small" />} iconPosition="start" />
-                        </Tabs>
+                {/* En-tête */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                    <IconButton onClick={() => navigate('/biens')} size="small">
+                        <ArrowBack />
+                    </IconButton>
+                    <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="h4">
+                            {getTypeLabel(bien.type_bien)} • {bien.marque || bien.fabricant} {bien.modele}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            {t('assets.qrCodeLabel', { code: bien.qr_code })}
+                        </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        {canCalculateAmortissement() && (
+                            <Tooltip title={t('assets.calculateDepreciation')}>
+                                <IconButton
+                                    onClick={handleOpenAmortissement}
+                                    color="primary"
+                                >
+                                    <Calculate />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                        <Tooltip title={t('assets.qrCode')}>
+                            <IconButton onClick={() => setQrDialogOpen(true)} color="primary">
+                                <QrCode />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title={t('assets.previewBeforePrint')}>
+                            <IconButton onClick={handleApercuFiche} color="primary">
+                                <Visibility />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title={t('assets.downloadPdf')}>
+                            <IconButton
+                                onClick={handlePrintFiche}
+                                color="success"
+                                disabled={printing}
+                            >
+                                {printing ? <CircularProgress size={24} /> : <Print />}
+                            </IconButton>
+                        </Tooltip>
+                        {canEditBien && (
+                            <Tooltip title={t('common.edit')}>
+                                <IconButton onClick={handleEdit} color="info">
+                                    <Edit />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                        {canDeleteBien && (
+                            <Tooltip title={t('common.delete')}>
+                                <IconButton onClick={() => setConfirmDelete({ open: true })} color="error">
+                                    <Delete />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                    </Box>
+                </Box>
 
-                        {activeTab === 0 && (
-                            <Box>
-                                <Card variant="outlined" sx={{ mb: 3 }}>
-                                    <CardHeader
-                                        title={t('assets.technicalSheet')}
-                                        avatar={<Avatar sx={{ bgcolor: 'primary.main' }}><Info fontSize="small" /></Avatar>}
-                                    />
-                                    <CardContent>
-                                        <Grid container spacing={2}>
-                                            <Grid item xs={12} md={4}>
-                                                <InfoField label={t('assets.fieldType')} value={getTypeLabel(bien.type_bien)} />
-                                            </Grid>
-                                            <Grid item xs={12} md={4}>
-                                                <InfoField label={t('assets.fieldState')} value={
-                                                    <Chip
-                                                        label={etatInfo.label}
-                                                        size="small"
-                                                        sx={{
-                                                            bgcolor: `${etatInfo.color}20`,
-                                                            color: etatInfo.color,
-                                                            fontWeight: 500
-                                                        }}
-                                                    />
-                                                } />
-                                            </Grid>
-                                            {hasValidValue(ageAns) && (
-                                                <Grid item xs={12} md={4}>
-                                                    <InfoField label={t('assets.fieldAge')} value={t('assets.fieldAgeValue', { count: ageAns })} />
-                                                </Grid>
-                                            )}
-                                            {canViewPurchasePrice && hasValidValue(bien.date_acquisition) && (
-                                                <Grid item xs={12} md={6}>
-                                                    <InfoField
-                                                        label={t('assets.fieldAcquisitionDate')}
-                                                        value={formatDate(bien.date_acquisition, 'fr', lang)}
-                                                        icon={<CalendarToday fontSize="small" />}
-                                                    />
-                                                </Grid>
-                                            )}
-                                            {canViewPurchasePrice && hasValidValue(bien.prix_acquisition) && (
-                                                <Grid item xs={12} md={6}>
-                                                    <InfoField
-                                                        label={t('assets.fieldAcquisitionPrice')}
-                                                        value={formatPrice(bien.prix_acquisition)}
-                                                        icon={<AttachMoney fontSize="small" />}
-                                                    />
-                                                </Grid>
-                                            )}
-                                            {hasValidValue(bien.localisation) && (
-                                                <Grid item xs={12}>
-                                                    <InfoField
-                                                        label={t('assets.fieldLocation')}
-                                                        value={bien.localisation}
-                                                        icon={<LocationOn fontSize="small" />}
-                                                    />
-                                                </Grid>
-                                            )}
-                                            {hasValidValue(bien.description) && (
-                                                <Grid item xs={12}>
-                                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                                        {t('assets.fieldDescription')}
-                                                    </Typography>
-                                                    <Typography variant="body2">{bien.description}</Typography>
-                                                </Grid>
-                                            )}
-                                        </Grid>
-                                    </CardContent>
-                                </Card>
+                {isTechnicianMode && (
+                    <Alert severity="info" sx={{ mb: 3 }}>
+                        <strong>{t('assets.technicianModeTitle')}</strong> — {t('assets.technicianModeInfo')}
+                    </Alert>
+                )}
 
-                                {renderSpecificFields() && (
-                                    <Card variant="outlined">
+                {(bien.etat === 'PANNE' || bien.etat === 'MAINTENANCE') && (
+                    <Alert
+                        severity={bien.etat === 'PANNE' ? 'error' : 'warning'}
+                        icon={bien.etat === 'PANNE' ? <Warning /> : <Build />}
+                        sx={{ mb: 3 }}
+                    >
+                        <strong>{bien.etat === 'PANNE' ? t('assets.statusPanne') : t('assets.statusMaintenance')}</strong>
+                        {bien.etat === 'PANNE'
+                            ? t('assets.statusPanneDesc')
+                            : t('assets.statusMaintenanceDesc')}
+                    </Alert>
+                )}
+
+                <Grid container spacing={3}>
+                    {/* Colonne gauche */}
+                    <Grid item xs={12} lg={8}>
+                        <Paper sx={{ p: 3 }}>
+                            <Tabs key={lang} value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }} variant="scrollable" scrollButtons="auto">
+                                <Tab label={t('assets.tabInfo')} />
+                                <Tab label={t('assets.tabHistory')} />
+                                <Tab label={t('assets.tabDocuments')} />
+                                <Tab label={t('assets.tabComponents')} icon={<PieChart fontSize="small" />} iconPosition="start" />
+                                <Tab label={t('assets.tabDepreciations')} icon={<AccountBalance fontSize="small" />} iconPosition="start" />
+                                <Tab label={t('assets.tabMovements')} icon={<DirectionsCar fontSize="small" />} iconPosition="start" />
+                            </Tabs>
+
+                            {activeTab === 0 && (
+                                <Box>
+                                    <Card variant="outlined" sx={{ mb: 3 }}>
                                         <CardHeader
-                                            title={t('assets.characteristics', { type: getTypeLabel(bien.type_bien) })}
-                                            avatar={<Avatar sx={{ bgcolor: 'primary.main' }}><Build fontSize="small" /></Avatar>}
+                                            title={t('assets.technicalSheet')}
+                                            avatar={<Avatar sx={{ bgcolor: 'primary.main' }}><Info fontSize="small" /></Avatar>}
                                         />
                                         <CardContent>
-                                            {renderSpecificFields()}
+                                            <Grid container spacing={2}>
+                                                <Grid item xs={12} md={4}>
+                                                    <InfoField label={t('assets.fieldType')} value={getTypeLabel(bien.type_bien)} />
+                                                </Grid>
+                                                <Grid item xs={12} md={4}>
+                                                    <InfoField label={t('assets.fieldState')} value={
+                                                        <Chip
+                                                            label={etatInfo.label}
+                                                            size="small"
+                                                            sx={{
+                                                                bgcolor: `${etatInfo.color}20`,
+                                                                color: etatInfo.color,
+                                                                fontWeight: 500
+                                                            }}
+                                                        />
+                                                    } />
+                                                </Grid>
+                                                {hasValidValue(ageAns) && (
+                                                    <Grid item xs={12} md={4}>
+                                                        <InfoField label={t('assets.fieldAge')} value={t('assets.fieldAgeValue', { count: ageAns })} />
+                                                    </Grid>
+                                                )}
+                                                {canViewPurchasePrice && hasValidValue(bien.date_acquisition) && (
+                                                    <Grid item xs={12} md={6}>
+                                                        <InfoField
+                                                            label={t('assets.fieldAcquisitionDate')}
+                                                            value={formatDate(bien.date_acquisition, 'fr', lang)}
+                                                            icon={<CalendarToday fontSize="small" />}
+                                                        />
+                                                    </Grid>
+                                                )}
+                                                {canViewPurchasePrice && hasValidValue(bien.prix_acquisition) && (
+                                                    <Grid item xs={12} md={6}>
+                                                        <InfoField
+                                                            label={t('assets.fieldAcquisitionPrice')}
+                                                            value={formatPrice(bien.prix_acquisition)}
+                                                            icon={<AttachMoney fontSize="small" />}
+                                                        />
+                                                    </Grid>
+                                                )}
+                                                {hasValidValue(bien.localisation) && (
+                                                    <Grid item xs={12}>
+                                                        <InfoField
+                                                            label={t('assets.fieldLocation')}
+                                                            value={typeof bien.localisation === 'object' && bien.localisation !== null
+                                                                ? bien.localisation.nom_localisation
+                                                                : bien.localisation}
+                                                            icon={<LocationOn fontSize="small" />}
+                                                        />
+                                                    </Grid>
+                                                )}
+                                                {hasValidValue(bien.description) && (
+                                                    <Grid item xs={12}>
+                                                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                                            {t('assets.fieldDescription')}
+                                                        </Typography>
+                                                        <Typography variant="body2">{bien.description}</Typography>
+                                                    </Grid>
+                                                )}
+                                            </Grid>
                                         </CardContent>
                                     </Card>
-                                )}
-                            </Box>
-                        )}
 
-                        {activeTab === 1 && (
-                            <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                                <History sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
-                                <Typography>{t('assets.historyPlaceholder')}</Typography>
-                                <Typography variant="body2" sx={{ mt: 1 }}>
-                                    {t('assets.historyPhase')}
-                                </Typography>
-                            </Box>
-                        )}
+                                    {renderSpecificFields() && (
+                                        <Card variant="outlined">
+                                            <CardHeader
+                                                title={t('assets.characteristics', { type: getTypeLabel(bien.type_bien) })}
+                                                avatar={<Avatar sx={{ bgcolor: 'primary.main' }}><Build fontSize="small" /></Avatar>}
+                                            />
+                                            <CardContent>
+                                                {renderSpecificFields()}
+                                            </CardContent>
+                                        </Card>
+                                    )}
+                                </Box>
+                            )}
 
-                        {activeTab === 2 && (
-                            <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                                <Info sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
-                                <Typography>{t('assets.documentsPlaceholder')}</Typography>
-                                <Typography variant="body2" sx={{ mt: 1 }}>
-                                    {t('assets.documentsPhase')}
-                                </Typography>
-                            </Box>
-                        )}
+                            {activeTab === 1 && (
+                                <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                                    <History sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
+                                    <Typography>{t('assets.historyPlaceholder')}</Typography>
+                                    <Typography variant="body2" sx={{ mt: 1 }}>
+                                        {t('assets.historyPhase')}
+                                    </Typography>
+                                </Box>
+                            )}
 
-                        {activeTab === 3 && (
-                            <Box sx={{ p: 2 }}>
-                                <Paper
-                                    variant="outlined"
-                                    sx={{
-                                        p: 2,
-                                        mb: 3,
-                                        bgcolor: '#e8f5e9',
-                                        borderColor: '#2e7d32',
-                                        borderLeft: 4,
-                                        borderLeftColor: '#2e7d32'
-                                    }}
-                                >
-                                    <Typography variant="h6" color="primary.main" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Build color="primary" />
-                                        {t('assets.componentsTitle')}
+                            {activeTab === 2 && (
+                                <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                                    <Info sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
+                                    <Typography>{t('assets.documentsPlaceholder')}</Typography>
+                                    <Typography variant="body2" sx={{ mt: 1 }}>
+                                        {t('assets.documentsPhase')}
                                     </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {t('assets.componentsDesc')}
-                                    </Typography>
-                                </Paper>
-                                {bien && <AnalyseComposantsPreview bienId={bien.id_bien} />}
-                                <ComposantsList
-                                    bienId={bien.id_bien}
-                                    readOnly={!canEditBien}
-                                    onRefresh={fetchBien}
-                                />
-                            </Box>
-                        )}
+                                </Box>
+                            )}
 
-                        {activeTab === 4 && (
-                            <Box sx={{ p: 2 }}>
-                                <Paper
-                                    variant="outlined"
-                                    sx={{
-                                        p: 2,
-                                        mb: 3,
-                                        bgcolor: '#fff8e1',
-                                        borderColor: '#f9a825',
-                                        borderLeft: 4,
-                                        borderLeftColor: '#f9a825'
-                                    }}
-                                >
-                                    <Typography variant="h6" color="primary.main" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <AccountBalance color="primary" />
-                                        {t('assets.depreciationsTitle')}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {t('assets.depreciationsDesc')}
-                                    </Typography>
-                                </Paper>
-                                {bien && (
-                                    <DepreciationHistory
+                            {activeTab === 3 && (
+                                <Box sx={{ p: 2 }}>
+                                    <Paper
+                                        variant="outlined"
+                                        sx={{
+                                            p: 2,
+                                            mb: 3,
+                                            bgcolor: '#e8f5e9',
+                                            borderColor: '#2e7d32',
+                                            borderLeft: 4,
+                                            borderLeftColor: '#2e7d32'
+                                        }}
+                                    >
+                                        <Typography variant="h6" color="primary.main" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Build color="primary" />
+                                            {t('assets.componentsTitle')}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {t('assets.componentsDesc')}
+                                        </Typography>
+                                    </Paper>
+                                    {bien && <AnalyseComposantsPreview bienId={bien.id_bien} />}
+                                    <ComposantsList
                                         bienId={bien.id_bien}
+                                        readOnly={!canEditBien}
                                         onRefresh={fetchBien}
                                     />
-                                )}
-                            </Box>
-                        )}
+                                </Box>
+                            )}
 
-                        {activeTab === 5 && (
-                            <Box sx={{ p: 2 }}>
-                                <Paper
-                                    variant="outlined"
-                                    sx={{
-                                        p: 2,
-                                        mb: 3,
-                                        bgcolor: 'grey.50',
-                                        borderColor: 'primary.main',
-                                        borderLeft: 4,
-                                        borderLeftColor: 'primary.main'
-                                    }}
-                                >
-                                    <Typography variant="h6" color="primary.main" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <DirectionsCar color="primary" />
-                                        {t('assets.movementsTitle')}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {t('assets.movementsDesc')}
-                                    </Typography>
-                                </Paper>
-                                <HistoriqueMouvements
-                                    bienId={bien.id_bien}
-                                    readOnly={!canCreateMouvementType('TRANSFERT')}
-                                />
-                            </Box>
-                        )}
-                    </Paper>
-                </Grid>
-
-                {/* Colonne droite */}
-                <Grid item xs={12} lg={4}>
-                    <Paper sx={{ p: 3, textAlign: 'center', mb: 3 }}>
-                        <Typography variant="h6" gutterBottom>{t('assets.qrCode')}</Typography>
-                        <Divider sx={{ mb: 2 }} />
-                        <Box
-                            sx={{
-                                bgcolor: 'grey.100',
-                                p: 2,
-                                borderRadius: 2,
-                                display: 'inline-block',
-                                mb: 2
-                            }}
-                        >
-                            <Typography variant="body2" fontFamily="monospace">
-                                {bien.qr_code}
-                            </Typography>
-                        </Box>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            startIcon={<QrCode />}
-                            onClick={() => setQrDialogOpen(true)}
-                            fullWidth
-                        >
-                            {t('assets.viewDownload')}
-                        </Button>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                            {t('assets.scanHint')}
-                        </Typography>
-                    </Paper>
-
-                    {canViewPurchasePrice && (
-                    <Paper sx={{ p: 3, mb: 3 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                            <AccountBalance sx={{ mr: 1, verticalAlign: 'middle', fontSize: 'small' }} />
-                            {t('assets.bookValue')}
-                        </Typography>
-                        <Box sx={{ mb: 1 }}>
-                            <Typography variant="h4" color="primary">
-                                {formatPrice(bien.prix_acquisition)}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('assets.acquisitionValue')}
-                            </Typography>
-                        </Box>
-                        {hasValidValue(ageAns) && (
-                            <>
-                                <LinearProgress variant="determinate" value={Math.min(ageAns * 10, 100)} sx={{ mb: 1 }} />
-                                <Typography variant="caption" color="text.secondary">
-                                    {t('assets.estimatedDepreciation')}
-                                </Typography>
-                            </>
-                        )}
-                    </Paper>
-                    )}
-
-                    <Paper sx={{ p: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>{t('assets.quickActions')}</Typography>
-                        <Grid container spacing={1}>
-                            <Grid item xs={6}>
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    fullWidth
-                                    startIcon={<Build />}
-                                    onClick={() => navigate(`/pannes/declarer?bien_id=${bien.id_bien}`)}
-                                >
-                                    {t('assets.declareBreakdown')}
-                                </Button>
-                            </Grid>
-                            <Grid item xs={6}>
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    fullWidth
-                                    startIcon={<CheckCircle />}
-                                    onClick={() => navigate(`/maintenances/planning?bien_id=${bien.id_bien}`)}
-                                >
-                                    {t('assets.planMaintenance')}
-                                </Button>
-                            </Grid>
-                            <Grid item xs={12} sx={{ mt: 1 }}>
-                                <Button
-                                    variant="outlined"
-                                    color="primary"
-                                    size="small"
-                                    fullWidth
-                                    startIcon={<DirectionsCar />}
-                                    onClick={() => navigate(`/mouvements/nouveau?bien_id=${bien.id_bien}`)}
-                                    disabled={!canCreateMouvementType('TRANSFERT')}
-                                >
-                                    {t('assets.newMovement')}
-                                </Button>
-                            </Grid>
-                            {canCalculateAmortissement() && (
-                                <Grid item xs={12} sx={{ mt: 1 }}>
-                                    <Button
-                                        variant="contained"
-                                        color="primary"
-                                        fullWidth
-                                        startIcon={<Calculate />}
-                                        onClick={handleOpenAmortissement}
+                            {activeTab === 4 && (
+                                <Box sx={{ p: 2 }}>
+                                    <Paper
+                                        variant="outlined"
+                                        sx={{
+                                            p: 2,
+                                            mb: 3,
+                                            bgcolor: '#fff8e1',
+                                            borderColor: '#f9a825',
+                                            borderLeft: 4,
+                                            borderLeftColor: '#f9a825'
+                                        }}
                                     >
-                                        {t('assets.calculateDepreciation')}
+                                        <Typography variant="h6" color="primary.main" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <AccountBalance color="primary" />
+                                            {t('assets.depreciationsTitle')}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {t('assets.depreciationsDesc')}
+                                        </Typography>
+                                    </Paper>
+                                    {bien && (
+                                        <DepreciationHistory
+                                            bienId={bien.id_bien}
+                                            onRefresh={fetchBien}
+                                        />
+                                    )}
+                                </Box>
+                            )}
+
+                            {activeTab === 5 && (
+                                <Box sx={{ p: 2 }}>
+                                    <Paper
+                                        variant="outlined"
+                                        sx={{
+                                            p: 2,
+                                            mb: 3,
+                                            bgcolor: 'grey.50',
+                                            borderColor: 'primary.main',
+                                            borderLeft: 4,
+                                            borderLeftColor: 'primary.main'
+                                        }}
+                                    >
+                                        <Typography variant="h6" color="primary.main" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <DirectionsCar color="primary" />
+                                            {t('assets.movementsTitle')}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {t('assets.movementsDesc')}
+                                        </Typography>
+                                    </Paper>
+                                    <HistoriqueMouvements
+                                        bienId={bien.id_bien}
+                                        readOnly={!canCreateMouvementType('TRANSFERT')}
+                                    />
+                                </Box>
+                            )}
+                        </Paper>
+                    </Grid>
+
+                    {/* Colonne droite */}
+                    <Grid item xs={12} lg={4}>
+                        <Paper sx={{ p: 3, textAlign: 'center', mb: 3 }}>
+                            <Typography variant="h6" gutterBottom>{t('assets.qrCode')}</Typography>
+                            <Divider sx={{ mb: 2 }} />
+                            <Box
+                                sx={{
+                                    bgcolor: 'grey.100',
+                                    p: 2,
+                                    borderRadius: 2,
+                                    display: 'inline-block',
+                                    mb: 2
+                                }}
+                            >
+                                <Typography variant="body2" fontFamily="monospace">
+                                    {bien.qr_code}
+                                </Typography>
+                            </Box>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                startIcon={<QrCode />}
+                                onClick={() => setQrDialogOpen(true)}
+                                fullWidth
+                            >
+                                {t('assets.viewDownload')}
+                            </Button>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                                {t('assets.scanHint')}
+                            </Typography>
+                        </Paper>
+
+                        {/* ✅ Section éligibilité cession utilisant le composant local */}
+                        <Box sx={{ mb: 3 }}>
+                            <CessionEligibilitySection
+                                bienId={bien.id_bien}
+                                onCessionClick={() => setShowCessionModal(true)}
+                            />
+                        </Box>
+
+                        {canViewPurchasePrice && (
+                            <Paper sx={{ p: 3, mb: 3 }}>
+                                <Typography variant="subtitle2" gutterBottom>
+                                    <AccountBalance sx={{ mr: 1, verticalAlign: 'middle', fontSize: 'small' }} />
+                                    {t('assets.bookValue')}
+                                </Typography>
+                                <Box sx={{ mb: 1 }}>
+                                    <Typography variant="h4" color="primary">
+                                        {formatPrice(bien.prix_acquisition)}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {t('assets.acquisitionValue')}
+                                    </Typography>
+                                </Box>
+                                {hasValidValue(ageAns) && (
+                                    <>
+                                        <LinearProgress variant="determinate" value={Math.min(ageAns * 10, 100)} sx={{ mb: 1 }} />
+                                        <Typography variant="caption" color="text.secondary">
+                                            {t('assets.estimatedDepreciation')}
+                                        </Typography>
+                                    </>
+                                )}
+                            </Paper>
+                        )}
+
+                        <Paper sx={{ p: 2 }}>
+                            <Typography variant="subtitle2" gutterBottom>{t('assets.quickActions')}</Typography>
+                            <Grid container spacing={1}>
+                                <Grid item xs={6}>
+                                    <Button
+                                        variant="outlined"
+                                        size="small"
+                                        fullWidth
+                                        startIcon={<Build />}
+                                        onClick={() => navigate(`/pannes/declarer?bien_id=${bien.id_bien}`)}
+                                    >
+                                        {t('assets.declareBreakdown')}
                                     </Button>
                                 </Grid>
-                            )}
-                            {canCalculateAmortissement() && bien.statut_comptable !== 'CEDE' && bien.statut_comptable !== 'MIS_AU_REBUT' && (
-                                <>
-                                    <Grid item xs={6} sx={{ mt: 1 }}>
+                                <Grid item xs={6}>
+                                    <Button
+                                        variant="outlined"
+                                        size="small"
+                                        fullWidth
+                                        startIcon={<CheckCircle />}
+                                        onClick={() => navigate(`/maintenances/planning?bien_id=${bien.id_bien}`)}
+                                    >
+                                        {t('assets.planMaintenance')}
+                                    </Button>
+                                </Grid>
+                                <Grid item xs={12} sx={{ mt: 1 }}>
+                                    <Button
+                                        variant="outlined"
+                                        color="primary"
+                                        size="small"
+                                        fullWidth
+                                        startIcon={<DirectionsCar />}
+                                        onClick={() => navigate(`/mouvements/nouveau?bien_id=${bien.id_bien}`)}
+                                        disabled={!canCreateMouvementType('TRANSFERT')}
+                                    >
+                                        {t('assets.newMovement')}
+                                    </Button>
+                                </Grid>
+                                {canCalculateAmortissement() && (
+                                    <Grid item xs={12} sx={{ mt: 1 }}>
                                         <Button
-                                            variant="outlined"
-                                            size="small"
+                                            variant="contained"
+                                            color="primary"
                                             fullWidth
-                                            color="success"
-                                            onClick={() => setShowCessionModal(true)}
+                                            startIcon={<Calculate />}
+                                            onClick={handleOpenAmortissement}
                                         >
-                                            {t('assets.disposeAsset')}
+                                            {t('assets.calculateDepreciation')}
                                         </Button>
                                     </Grid>
-                                    <Grid item xs={6} sx={{ mt: 1 }}>
-                                        <Button
-                                            variant="outlined"
-                                            size="small"
-                                            fullWidth
-                                            color="error"
-                                            onClick={() => setShowRebutModal(true)}
-                                        >
-                                            {t('assets.scrapAsset')}
-                                        </Button>
-                                    </Grid>
-                                </>
-                            )}
-                        </Grid>
-                    </Paper>
+                                )}
+                                {canCalculateAmortissement() && bien.statut_comptable !== 'CEDE' && bien.statut_comptable !== 'MIS_AU_REBUT' && (
+                                    <>
+                                        <Grid item xs={6} sx={{ mt: 1 }}>
+                                            <Button
+                                                variant="outlined"
+                                                size="small"
+                                                fullWidth
+                                                color="success"
+                                                onClick={() => setShowCessionModal(true)}
+                                            >
+                                                {t('assets.disposeAsset')}
+                                            </Button>
+                                        </Grid>
+                                        <Grid item xs={6} sx={{ mt: 1 }}>
+                                            <Button
+                                                variant="outlined"
+                                                size="small"
+                                                fullWidth
+                                                color="error"
+                                                onClick={() => setShowRebutModal(true)}
+                                            >
+                                                {t('assets.scrapAsset')}
+                                            </Button>
+                                        </Grid>
+                                    </>
+                                )}
+                            </Grid>
+                        </Paper>
+                    </Grid>
                 </Grid>
-            </Grid>
 
-            <QRCodeGenerator
-                bienId={bien.id_bien}
-                qrCode={bien.qr_code}
-                open={qrDialogOpen}
-                onClose={() => setQrDialogOpen(false)}
-            />
+                <QRCodeGenerator
+                    bienId={bien.id_bien}
+                    qrCode={bien.qr_code}
+                    open={qrDialogOpen}
+                    onClose={() => setQrDialogOpen(false)}
+                />
 
-            <ConfirmDialog
-                open={confirmDelete.open}
-                title={t('assets.deleteTitle')}
-                content={t('assets.deleteContent', {
-                    name: `${bien.marque || bien.fabricant} ${bien.modele}`,
-                })}
-                onConfirm={handleDelete}
-                onCancel={() => setConfirmDelete({ open: false })}
-            />
+                <ConfirmDialog
+                    open={confirmDelete.open}
+                    title={t('assets.deleteTitle')}
+                    content={t('assets.deleteContent', {
+                        name: `${bien.marque || bien.fabricant} ${bien.modele}`,
+                    })}
+                    onConfirm={handleDelete}
+                    onCancel={() => setConfirmDelete({ open: false })}
+                />
 
-            <Dialog open={showCessionModal} onClose={() => setShowCessionModal(false)} maxWidth="md" fullWidth>
-                <DialogTitle>{t('assets.cessionTitle')}</DialogTitle>
-                <DialogContent>
-                    <CessionBien
-                        embedded
-                        bienId={String(bien.id_bien)}
-                        onClose={(ok) => {
-                            setShowCessionModal(false);
-                            if (ok) fetchBien();
-                        }}
-                    />
-                </DialogContent>
-            </Dialog>
+                <Dialog open={showCessionModal} onClose={() => setShowCessionModal(false)} maxWidth="md" fullWidth>
+                    <DialogTitle>{t('assets.cessionTitle')}</DialogTitle>
+                    <DialogContent>
+                        <CessionBien
+                            embedded
+                            bienId={String(bien.id_bien)}
+                            onClose={(ok) => {
+                                setShowCessionModal(false);
+                                if (ok) fetchBien();
+                            }}
+                        />
+                    </DialogContent>
+                </Dialog>
 
-            <Dialog open={showRebutModal} onClose={() => setShowRebutModal(false)} maxWidth="md" fullWidth>
-                <DialogTitle>{t('assets.scrapTitle')}</DialogTitle>
-                <DialogContent>
-                    <RebutBien
-                        embedded
-                        bienId={String(bien.id_bien)}
-                        onClose={(ok) => {
-                            setShowRebutModal(false);
-                            if (ok) fetchBien();
-                        }}
-                    />
-                </DialogContent>
-            </Dialog>
-        </Box>
+                {/* Modal de cession */}
+                <CessionModal
+                    isOpen={showCessionModal}
+                    onClose={() => setShowCessionModal(false)}
+                    bien={bien}
+                    onSuccess={() => {
+                        setShowCessionModal(false);
+                        fetchBien();
+                    }}
+                />
+
+                <Dialog open={showRebutModal} onClose={() => setShowRebutModal(false)} maxWidth="md" fullWidth>
+                    <DialogTitle>{t('assets.scrapTitle')}</DialogTitle>
+                    <DialogContent>
+                        <RebutBien
+                            embedded
+                            bienId={String(bien.id_bien)}
+                            onClose={(ok) => {
+                                setShowRebutModal(false);
+                                if (ok) fetchBien();
+                            }}
+                        />
+                    </DialogContent>
+                </Dialog>
+            </Box>
         </ThemeProvider>
     );
 };
 
-// Composant InfoField modifié pour ne pas afficher les valeurs vides
+// ============================================================
+// ✅ COMPOSANT InfoField
+// ============================================================
 const InfoField = ({ label, value, icon, copy = false, copyLabel }) => {
     const langCtx = useTranslationOptional();
     const resolvedCopyLabel = copyLabel ?? langCtx?.t('assets.copy') ?? 'Copier';
@@ -801,7 +932,7 @@ const InfoField = ({ label, value, icon, copy = false, copyLabel }) => {
             await navigator.clipboard.writeText(value);
         }
     };
-    
+
     // Si value est un élément React (comme Chip), le rendre directement
     if (React.isValidElement(value)) {
         return (
@@ -823,7 +954,7 @@ const InfoField = ({ label, value, icon, copy = false, copyLabel }) => {
             </Box>
         );
     }
-    
+
     return (
         <Box>
             <Typography

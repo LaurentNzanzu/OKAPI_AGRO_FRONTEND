@@ -228,7 +228,7 @@
     },
     "nouveau": {
       "title": "New asset",
-      "pageTitle": "Add asset",
+      "pageTitle": "Ajouter un bien",
       "createSuccess": "Asset created successfully",
       "createError": "Error creating asset",
       "steps": {

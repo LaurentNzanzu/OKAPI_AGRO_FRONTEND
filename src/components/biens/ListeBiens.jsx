@@ -1,4 +1,3 @@
-// frontend/src/components/biens/ListeBiens.jsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import AppPage from '../ui/AppPage';
 import { useNavigate } from 'react-router-dom';
@@ -97,7 +96,7 @@ const ListeBiens = () => {
   const [error, setError] = useState(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [selectedBien, setSelectedBien] = useState(null);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState({ search: '', type_bien: '', etat: '' });
@@ -112,16 +111,19 @@ const ListeBiens = () => {
     try {
       setLoading(true);
       setError(null);
+      
       const response = await biensService.getAll({
-        page: page + 1,
+        page: page,
         limit: rowsPerPage,
         type_bien: filters.type_bien || undefined,
         etat: filters.etat || undefined,
         search: filters.search || undefined,
       });
+      
       setBiens(response?.biens || []);
       setTotal(response?.total || 0);
     } catch (err) {
+      console.error('Erreur fetchBiens:', err);
       setError(err.response?.data?.detail || t('assets.loadListError'));
       setBiens([]);
       setTotal(0);
@@ -136,7 +138,7 @@ const ListeBiens = () => {
 
   const handleFilterChange = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
-    setPage(0);
+    setPage(1);
   };
 
   const handleDelete = async (id) => {
@@ -154,7 +156,7 @@ const ListeBiens = () => {
     try {
       setLoadingInventaire(true);
       const result = await biensService.getAll({
-        page: 1,
+        skip: 0,
         limit: 500,
         type_bien: filters.type_bien,
         etat: filters.etat,
@@ -169,7 +171,19 @@ const ListeBiens = () => {
     }
   };
 
-  const totalPages = Math.ceil(total / rowsPerPage) || 1;
+  const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
+
+  const handleNextPage = () => {
+    if (page < totalPages) {
+      setPage(prev => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (page > 1) {
+      setPage(prev => prev - 1);
+    }
+  };
 
   if (!authReady || loading) {
     return <LoadingSpinner message={t('assets.loadingAssets')} />;
@@ -295,6 +309,13 @@ const ListeBiens = () => {
                   const bienId = bien.id_bien || bien.id;
                   const label = `${bien.marque || bien.fabricant || 'N/A'} ${bien.modele || ''}`.trim();
 
+                  const getLocalisationName = (loc) => {
+                    if (typeof loc === 'object' && loc !== null) {
+                      return loc.nom_localisation || '—';
+                    }
+                    return loc || '—';
+                  };
+
                   return (
                     <tr key={bienId}>
                       <td className="px-6 py-4">
@@ -324,7 +345,7 @@ const ListeBiens = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-slate-400">
-                        {bien.localisation || '—'}
+                        {getLocalisationName(bien.localisation)}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-1">
@@ -390,8 +411,9 @@ const ListeBiens = () => {
               <select
                 value={rowsPerPage}
                 onChange={(e) => {
-                  setRowsPerPage(parseInt(e.target.value, 10));
-                  setPage(0);
+                  const newRows = parseInt(e.target.value, 10);
+                  setRowsPerPage(newRows);
+                  setPage(1);
                 }}
                 className="form-input"
                 aria-label={t('common.rowsPerPage')}
@@ -404,21 +426,34 @@ const ListeBiens = () => {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setPage((p) => p - 1)}
-                disabled={page === 0}
-                className="p-2 text-gray-500 dark:text-slate-400 hover:text-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handlePrevPage}
+                disabled={page === 1}
+                className="p-2 text-gray-500 dark:text-slate-400 hover:text-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 aria-label={t('common.previousPage')}
               >
                 <ChevronLeftIcon className="w-5 h-5" />
               </button>
-              <span className="text-sm text-gray-600 dark:text-slate-300">
-                {t('common.pageOf', { current: page + 1, total: totalPages })}
-              </span>
+              {Array.from({ length: totalPages }).map((_, index) => {
+                const pageNumber = index + 1;
+                return (
+                  <button
+                    key={pageNumber}
+                    onClick={() => setPage(pageNumber)}
+                    className={`px-3 py-1 rounded-md transition-colors ${
+                      page === pageNumber
+                        ? 'bg-primary-600 text-white'
+                        : 'text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-night-hover'
+                    }`}
+                  >
+                    {pageNumber}
+                  </button>
+                );
+              })}
               <button
                 type="button"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page + 1 >= totalPages}
-                className="p-2 text-gray-500 dark:text-slate-400 hover:text-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleNextPage}
+                disabled={page === totalPages}
+                className="p-2 text-gray-500 dark:text-slate-400 hover:text-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 aria-label={t('common.nextPage')}
               >
                 <ChevronRightIcon className="w-5 h-5" />

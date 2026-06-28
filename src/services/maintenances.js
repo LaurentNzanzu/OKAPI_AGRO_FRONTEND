@@ -1,3 +1,4 @@
+// frontend/src/services/maintenances.js
 import api from './api';
 
 const BASE_URL = '/maintenances';
@@ -79,4 +80,69 @@ export const maintenancesService = {
         const response = await api.get(`${BASE_URL}/panne/${panneId}`);
         return response.data;
     },
+
+    // ============================================================
+    // NOUVEAUX SERVICES TÂCHE 3
+    // ============================================================
+    
+    /**
+     * Récupère les alertes de maintenance
+     * - Biens critiques sous surveillance
+     * - Maintenances préventives auto-générées
+     */
+    getAlertesMaintenance: async () => {
+        const response = await api.get(`${BASE_URL}/alertes`);
+        return response.data;
+    },
+
+    /**
+     * Exécute une maintenance (marque comme exécutée)
+     */
+    executer: async (maintenanceId) => {
+        const response = await api.post(`${BASE_URL}/${maintenanceId}/executer`);
+        return response.data;
+    },
+
+    /**
+     * Récupère les maintenances auto-générées
+     */
+    getAutoGenerees: async (statut = null) => {
+        const url = statut ? `${BASE_URL}/auto-generees?statut=${statut}` : `${BASE_URL}/auto-generees`;
+        const response = await api.get(url);
+        return response.data;
+    },
+
+    /**
+     * Récupère les statistiques des maintenances auto-générées
+     */
+    getStatistiquesAuto: async () => {
+        const response = await api.get(`${BASE_URL}/statistiques/auto-generees`);
+        return response.data;
+    },
+
+    /**
+     * Exécute une maintenance auto-générée
+     */
+    executerAuto: async (maintenanceId, observations = null) => {
+        const url = observations 
+            ? `${BASE_URL}/${maintenanceId}/executer-auto?observations=${encodeURIComponent(observations)}`
+            : `${BASE_URL}/${maintenanceId}/executer-auto`;
+        const response = await api.post(url);
+        return response.data;
+    },
+
+    /**
+     * Récupère les ordres de remplacement
+     */
+    getOrdresRemplacement: async (statut = null, priorite = null) => {
+        let url = `${BASE_URL}/alerte-vnc/ordres`;
+        const params = new URLSearchParams();
+        if (statut) params.append('statut', statut);
+        if (priorite) params.append('priorite', priorite);
+        if (params.toString()) url += `?${params.toString()}`;
+        const response = await api.get(url);
+        return response.data;
+    }
 };
+
+export default maintenancesService;

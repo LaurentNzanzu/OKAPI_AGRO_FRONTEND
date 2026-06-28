@@ -62,6 +62,7 @@ import {
   CreditCardIcon,
   UserPlusIcon,
   ArrowRightOnRectangleIcon,
+  QrCodeIcon,
 } from '@heroicons/react/24/outline';
 
 /** Tailles cohérentes dans toute l'application */
@@ -142,8 +143,6 @@ export const PANNE_TYPE_CONFIG = {
   MECANIQUE: { label: 'Mécanique', Icon: WrenchScrewdriverIcon, color: 'bg-primary-100 text-primary-600 dark:bg-primary-900/40 dark:text-primary-200' },
   ELECTRIQUE: { label: 'Électrique', Icon: BoltIcon, color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
   ELECTRONIQUE: { label: 'Électronique', Icon: CpuChipIcon, color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
-  LOGICIELLE: { label: 'Logicielle', Icon: CircleStackIcon, color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
-  STRUCTURELLE: { label: 'Structurelle', Icon: BuildingOffice2Icon, color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
   AUTRE: { label: 'Autre', Icon: CubeIcon, color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-slate-300' },
 };
 
@@ -241,4 +240,5 @@ export {
   SignalIcon,
   CreditCardIcon,
   UserPlusIcon,
+  QrCodeIcon,
 };

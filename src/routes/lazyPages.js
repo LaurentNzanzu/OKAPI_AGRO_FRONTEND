@@ -12,7 +12,7 @@ export const Dashboard = lazy(() => import('../components/dashboard/Dashboard'))
 
 // Biens
 export const ListeBiens = lazy(() => import('../components/biens/ListeBiens'));
-export const NouveauBien = lazy(() => import('../components/biens/nouveau/NouveauBien'));
+export const NouveauBien = lazy(() => import('../components/biens/NouveauBien'));
 export const FicheBien = lazy(() => import('../components/biens/FicheBien'));
 export const EditBien = lazy(() => import('../components/biens/EditBien'));
 
@@ -85,6 +85,21 @@ export const PrintFicheAmortissement = lazy(() => import('../components/prints/P
 export const PrintEtatBesoin = lazy(() => import('../components/prints/PrintEtatBesoin'));
 export const Profil = lazy(() => import('../components/profil/Profil'));
 export const Parametres = lazy(() => import('../components/parametres/Parametres'));
+export const PrintPanne = lazy(() => import('../components/prints/PrintPanne'));
 
 //PLAN_COMPTABLE
 //export const PlanComptable = lazy(() => import('../components/administration/PlanComptable'));
+export const WorkflowValidation = lazy(() => import('../components/validations/WorkflowValidation'));
+export const EtatBesoins = lazy(() => import('../components/besoins/EtatBesoins'));
+export const CessionModal = lazy(() => import('../components/cessions/CessionModal'));
+export const CessionEligibilitySection = lazy(() => import('../components/biens/FicheBien'));
+export const GestionBudgets = lazy(() => import('../components/budgets/GestionBudgets'));
+export const BudgetWidget = lazy(() => import('../components/budgets/BudgetWidget'));
+
+export const ValidationsPage = lazy(() => import('../pages/ValidationsPage'));
+export const BudgetsPage = lazy(() => import('../pages/BudgetsPage'));
+
+export const JournalImmobilisations = lazy(() => import('../components/audit/JournalImmobilisations'));
+export const Tableau8OHADA = lazy(() => import('../components/rapports/Tableau8OHADA'));
+export const PrevisionsFinancieres = lazy(() => import('../components/rapports/PrevisionsFinancieres'));
+export const GestionCaisse = lazy(() => import('../components/caisse/GestionCaisse'));

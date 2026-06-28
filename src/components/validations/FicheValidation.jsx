@@ -1,3 +1,4 @@
+// frontend/src/components/validations/FicheValidation.jsx
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../context/LanguageContext';
 import AppPage from '../ui/AppPage';
@@ -17,10 +18,13 @@ import {
 } from '../ui/icons';
 
 const FicheValidation = () => {
-  const { t } = useTranslation();
+    const { t } = useTranslation();
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth(); // ✅ Récupération de l'utilisateur connecté
+    const { user } = useAuth();
+    
+    // ✅ Conversion de l'ID en nombre
+    const besoinId = parseInt(id, 10);
     
     const [workflow, setWorkflow] = useState(null);
     const [historique, setHistorique] = useState([]);
@@ -85,7 +89,7 @@ const FicheValidation = () => {
         const currentRole = user.roles.find(r => ['DG', 'COMPTABLE', 'CAISSE', 'ADMIN'].includes(r));
         const status = workflow.statut_actuel;
 
-        if (currentRole === 'ADMIN') return true; // L'admin peut toujours valider
+        if (currentRole === 'ADMIN') return true;
         if (status === 'BROUILLON' || status === 'EN_VALIDATION') return currentRole === 'DG';
         if (status === 'DG_VALIDE') return currentRole === 'COMPTABLE';
         if (status === 'COMPTABLE_VALIDE') return currentRole === 'CAISSE';
@@ -100,6 +104,11 @@ const FicheValidation = () => {
         if (status === 'DG_VALIDE') return 'le Comptable';
         if (status === 'COMPTABLE_VALIDE') return 'la Caisse';
         return '';
+    };
+
+    // ✅ Fonction pour rafraîchir les données
+    const handleRefresh = () => {
+        fetchData();
     };
 
     if (loading) {
@@ -155,7 +164,12 @@ const FicheValidation = () => {
                     </div>
                 </div>
 
-                <WorkflowValidation workflow={workflow} />
+                {/* ✅ Passer BESOIN_ID au composant WorkflowValidation */}
+                <WorkflowValidation 
+                    workflow={workflow} 
+                    besoinId={besoinId}  // ✅ AJOUTER CETTE LIGNE
+                    onRefresh={handleRefresh}  // ✅ AJOUTER CETTE LIGNE
+                />
             </div>
 
             {/* ✅ BOUTON D'ACTION CONDITIONNEL */}
