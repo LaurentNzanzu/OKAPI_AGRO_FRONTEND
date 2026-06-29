@@ -51,7 +51,7 @@ const CaisseWidget = () => {
                   {caisse?.solde_physique?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
                 </span>
                 <span className="text-xs font-medium text-gray-500 dark:text-slate-400">
-                  {caisse?.devise || 'FCFA'}
+                  {caisse?.devise || 'USD'}
                 </span>
               </div>
             )}

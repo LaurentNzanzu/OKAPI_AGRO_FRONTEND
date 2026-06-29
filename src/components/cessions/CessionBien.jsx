@@ -105,7 +105,7 @@ const CessionBien = ({ embedded = false, bienId: bienIdProp, onClose }) => {
 
       {bien && (
         <p className="text-sm text-gray-500">
-          {bien.marque || bien.fabricant} {bien.modele} — Acquisition : {bien.prix_acquisition} FCFA
+          {bien.marque || bien.fabricant} {bien.modele} — Acquisition : {bien.prix_acquisition} USD
         </p>
       )}
 
@@ -138,7 +138,7 @@ const CessionBien = ({ embedded = false, bienId: bienIdProp, onClose }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="form-label">Prix de vente (FCFA) *</label>
+          <label className="form-label">Prix de vente (USD) *</label>
           <input
             type="number"
             step="0.01"
@@ -150,7 +150,7 @@ const CessionBien = ({ embedded = false, bienId: bienIdProp, onClose }) => {
           />
         </div>
         <div>
-          <label className="form-label">VNC (FCFA) *</label>
+          <label className="form-label">VNC (USD) *</label>
           <input
             type="number"
             step="0.01"

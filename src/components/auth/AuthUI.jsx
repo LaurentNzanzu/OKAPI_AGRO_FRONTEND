@@ -51,7 +51,7 @@ export const HeroIllustration = () => (
 
 export const AuthFooter = () => (
   <footer className="af-auth__footer">
-    <span className="af-auth__copyright">© 2026 AssetFlow Inc.</span>
+    <span className="af-auth__copyright">© 2026 OKAPI Immobilisation</span>
     <nav className="af-auth__footer-links" aria-label="Liens pied de page">
       <a href="#" className="af-auth__footer-link">Confidentialité</a>
       <a href="#" className="af-auth__footer-link">Conditions</a>

@@ -126,7 +126,7 @@
     "reprise": {
       "title": "Impairment reversal",
       "success": "Reversal recorded. Entry {{debit}}/{{credit}}. New cumulative: {{cumul}}",
-      "amountLabel": "Amount to reverse (FCFA) *",
+      "amountLabel": "Amount to reverse (USD) *",
       "motifLabel": "Reason *",
       "motifPlaceholder": "Reason for reversal...",
       "confirmBtn": "Confirm reversal",

@@ -90,6 +90,7 @@ import {
   Tableau8OHADA,
   PrevisionsFinancieres,
   GestionCaisse,
+  GestionEtats,
 } from './routes/lazyPages';
 
 const Lazy = ({ children }) => (
@@ -176,7 +177,6 @@ function App() {
                   <Route path="amortissements/tableau/:id" element={<Lazy><TableauAmortissement /></Lazy>} />
                   <Route path="amortissements/ecritures" element={<Lazy><EcrituresComptables /></Lazy>} />
                   <Route path="amortissements/regles" element={<Lazy><GestionReglesAmortissement /></Lazy>} />
-                  <Route path="amortissements/fiche/:id" element={<Lazy><FicheAmortissement /></Lazy>} />
 
                   {/* Routes de cession */}
                   <Route path="cessions/nouveau" element={<Lazy><CessionBien /></Lazy>} />
@@ -184,14 +184,13 @@ function App() {
                   <Route path="cessions/modal/:id" element={<Lazy><CessionModal /></Lazy>} />
                   <Route path="rebut/nouveau" element={<Lazy><RebutBien /></Lazy>} />
 
-                  {/* Routes des besoins */}
+                  {/* Routes des besoins et budgets */}
                   <Route path="etat-besoins" element={<Lazy><EtatBesoins /></Lazy>} />
-
-                  {/* Routes des budgets avec le contexte BudgetProvider */}
                   <Route path="budgets" element={<Lazy><GestionBudgets /></Lazy>} />
                   <Route path="budgets/widget" element={<Lazy><BudgetWidget /></Lazy>} />
                   <Route path="budgets-page" element={<Lazy><BudgetsPage /></Lazy>} />
                   <Route path="caisse" element={<Lazy><GestionCaisse /></Lazy>} />
+                  <Route path="etats" element={<Lazy><GestionEtats /></Lazy>} />
 
                   <Route path="plan-comptable" element={<Lazy><PlanComptable /></Lazy>} />
 

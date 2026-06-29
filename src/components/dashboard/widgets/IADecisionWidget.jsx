@@ -40,8 +40,9 @@ const IADecisionWidget = () => {
       const alertesSurveiller = alertesData.filter((a) => a.action === 'SURVEILLER');
       setAlertesPieces([...alertesUrgentes, ...alertesSurveiller].slice(0, 3));
     } catch (err) {
-      console.error('Erreur chargement données IA:', err);
-      setError(t('ia.widget.loadError'));
+      console.warn('Chargement des recommandations IA limité:', err);
+      setBiensCritiques([]);
+      setAlertesPieces([]);
     } finally {
       setLoading(false);
     }

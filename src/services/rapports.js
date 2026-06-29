@@ -184,6 +184,14 @@ export const exportCSV = (data, filename) => {
     URL.revokeObjectURL(link.href);
 };
 
+export const exportTableau8PDF = async (annee) => {
+    const response = await api.get(`/rapports/tableau-8/export-pdf`, {
+        params: { annee },
+        responseType: 'blob'
+    });
+    return response;
+};
+
 export default {
     getRapportFinancier,
     getRapportTechnique,
@@ -192,6 +200,7 @@ export default {
     exportRapportOHADA,
     exporterRapport,
     generateTableau8,
+    exportTableau8PDF,
     getProjections,
     getJournalImmobilisations,
     exportCSV

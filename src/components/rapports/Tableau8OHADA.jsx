@@ -4,7 +4,7 @@ import { useTranslation } from '../../context/LanguageContext';
 import AppPage from '../ui/AppPage';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
-import { rapportsService } from '../../services/rapports';
+import  rapportsService  from '../../services/rapports';
 import { formatPrice } from '../../utils/formatters';
 import {
   AppIcon,
@@ -38,8 +38,21 @@ const Tableau8OHADA = () => {
     }
   };
 
-  const exporterPDF = () => {
-    window.print();
+  const exporterPDF = async () => {
+    try {
+      const response = await rapportsService.exportTableau8PDF(annee);
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `tableau8_${annee}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erreur export PDF Tableau 8:', err);
+      window.print();
+    }
   };
 
   const exporterCSV = () => {

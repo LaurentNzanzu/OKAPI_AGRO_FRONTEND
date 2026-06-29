@@ -92,7 +92,8 @@ const MethodeSelect = ({ value, onChange }) => {
 const formatPrice = (amount) => {
   return new Intl.NumberFormat('fr-FR', { 
     style: 'currency', 
-    currency: 'USD' 
+    currency: 'XAF',
+    maximumFractionDigits: 0
   }).format(amount || 0);
 };
 

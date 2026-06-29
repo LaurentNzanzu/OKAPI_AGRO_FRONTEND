@@ -32,7 +32,7 @@ import HistoriqueMouvements from '../mouvements/HistoriqueMouvements';
 import CalculAmortissement from '../amortissements/CalculAmortissement';
 import CessionBien from '../cessions/CessionBien';
 import RebutBien from '../cessions/RebutBien';
-import DepreciationHistory from '../depreciations/DepreciationHistory';
+import DepreciationHistory from '../amortissements/DepreciationHistory';
 import etatsService from '../../services/etats';
 // ✅ Remplacer l'import défectueux par le composant local (défini dans ce fichier)
 // import CessionEligibilitySection from './FicheImmobilisation';  // ❌ À SUPPRIMER
@@ -406,7 +406,7 @@ const FicheBien = () => {
                 >
                     <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
                         {t('assets.calculateDepreciationTitle', {
-                            name: `${bien.marque || bien.fabricant} ${bien.modele}`,
+                            name: bien.nom_bien || bien.designation || (bien.marque || bien.fabricant ? `${bien.marque || bien.fabricant} ${bien.modele || ''}`.trim() : `${bien.type_bien || ''} #${bien.id_bien}`),
                         })}
                     </DialogTitle>
                     <DialogContent sx={{ p: 0 }}>

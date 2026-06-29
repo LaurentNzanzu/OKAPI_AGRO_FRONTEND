@@ -8,6 +8,7 @@ import { biensService } from '../../services/biens';
 import { ecrituresService } from '../../services/ecritures_comptables';
 import { formatPrice, formatDate } from '../../utils/formatters';
 import etatsService from '../../services/etats';
+import WorkflowAmortissementStepper from './WorkflowAmortissementStepper';
 import {
   AppIcon,
   EyeIcon,
@@ -250,6 +251,14 @@ const FicheAmortissement = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Workflow de Validation en 4 étapes (COMPTABLE -> CAISSE -> DG -> COMPTABLE) */}
+            {amortissement && (
+                <WorkflowAmortissementStepper 
+                    idAmortissement={amortissement.id_amortissement} 
+                    onWorkflowUpdate={fetchData} 
+                />
+            )}
 
             {/* Cartes de synthèse */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -8,9 +8,10 @@ export const biensService = {
    * Récupère la liste des biens avec pagination et filtres
    */
   getAll: async (params = {}) => {
-    const { page = 1, limit = 10, type_bien, etat, search } = params;
+    const { page = 1, limit = 10, skip, type_bien, etat, search } = params;
+    const skipVal = skip !== undefined ? skip : (page - 1) * limit;
     const queryParams = new URLSearchParams({
-      skip: String((page - 1) * limit),
+      skip: String(skipVal),
       limit: String(limit),
       ...(type_bien && { type_bien }),
       ...(etat && { etat }),

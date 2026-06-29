@@ -212,7 +212,8 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
         { labelKey: 'navHistory', path: '/amortissements', roles: ['ADMIN', 'COMPTABLE'] },
         { labelKey: 'navAccountingEntries', path: '/amortissements/ecritures', roles: ['COMPTABLE'] },
         { labelKey: 'navDepreciationRules', path: '/amortissements/regles', roles: ['COMPTABLE'] },
-        { labelKey: 'navPlanComptable', path: 'plan-comptable', roles: ['COMPTABLE', 'ADMIN'] },
+        { labelKey: 'navPlanComptable', path: '/plan-comptable', roles: ['COMPTABLE', 'ADMIN'] },
+        { labelKey: 'navCloture', path: '/amortissements/cloture', roles: ['ADMIN', 'COMPTABLE'] },
       ],
     },
     {
@@ -224,6 +225,9 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
         { labelKey: 'navFinancialReport', path: '/rapports/financiers', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
         { labelKey: 'navTechnicalReport', path: '/rapports/techniques', roles: ['ADMIN', 'DG', 'COMPTABLE', 'TECHNICIEN'] },
         { labelKey: 'navDepreciationReport', path: '/rapports/amortissements', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
+        { labelKey: 'navTableau8', path: '/rapports/tableau8', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
+        { labelKey: 'navPrevisions', path: '/rapports/previsions', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
+        { labelKey: 'navEtats', path: '/etats', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
       ],
     },
     {
