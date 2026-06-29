@@ -1,3 +1,4 @@
+// frontend/src/components/pannes/FichePanne.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { pannesService } from '../../services/pannes';
@@ -32,7 +33,17 @@ import {
   PencilSquareIcon,
   ArrowDownTrayIcon,
   PlusIcon,
+  PrinterIcon,
 } from '../ui/icons';
+
+// ✅ Fonction pour extraire le nom de la localisation
+const getLocalisationName = (loc) => {
+  if (!loc) return '—';
+  if (typeof loc === 'object' && loc !== null) {
+    return loc.nom_localisation || '—';
+  }
+  return loc;
+};
 
 const FichePanne = () => {
   const { t } = useTranslation();
@@ -75,7 +86,7 @@ const FichePanne = () => {
       }
 
       const besoinsData = await besoinsService.getByPanneId(id);
-      setBesoins(besoinsData);
+      setBesoins(besoinsData || []);
 
       try {
         const maintData = await maintenancesService.getByPanne(id);
@@ -90,11 +101,17 @@ const FichePanne = () => {
       if (err.response?.status === 403) {
         setError(t('pannes.fiche.unauthorized'));
       } else {
-        setError(t('pannes.fiche.loadError'));
+        setError(err.response?.data?.detail || t('pannes.fiche.loadError'));
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  // ✅ IMPRESSION DE LA FICHE PANNE
+  const handlePrint = () => {
+    if (!panne) return;
+    window.open(`/prints/fiche-panne/${panne.id_panne}`, '_blank', 'noopener,noreferrer');
   };
 
   const handleChangerStatut = async (nouveauStatut) => {
@@ -198,9 +215,12 @@ const FichePanne = () => {
           <h2 className="text-xl font-semibold text-red-700 mb-2">
             {error || t('pannes.fiche.notFound')}
           </h2>
+          <p className="text-sm text-red-600 mb-4">
+            {error === t('pannes.fiche.loadError') ? 'Veuillez vérifier que vous avez les droits d\'accès ou que la panne existe.' : ''}
+          </p>
           <button 
             onClick={() => navigate('/pannes/mes-pannes')}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 inline-flex items-center gap-2"
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 inline-flex items-center gap-2"
           >
             <AppIcon icon={ArrowLeftIcon} size="sm" className="text-white" />
             {t('pannes.fiche.backToList')}
@@ -236,13 +256,24 @@ const FichePanne = () => {
             </p>
           </div>
         </div>
-        {statutConfig ? (
-          <StatusBadge label={statutConfig.label} Icon={statutConfig.Icon} color={statutConfig.color} iconSize="sm" />
-        ) : (
-          <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300">
-            {panne.statut}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm inline-flex items-center gap-1.5"
+            title="Imprimer la fiche panne"
+          >
+            <AppIcon icon={PrinterIcon} size="sm" className="text-white" />
+            {t('common.print')}
+          </button>
+          {statutConfig ? (
+            <StatusBadge label={statutConfig.label} Icon={statutConfig.Icon} color={statutConfig.color} iconSize="sm" />
+          ) : (
+            <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300">
+              {panne.statut}
+            </span>
+          )}
+        </div>
       </div>
 
       {bienAccessWarning && (
@@ -273,12 +304,11 @@ const FichePanne = () => {
                   {t('pannes.fiche.state')} : {normalizeStatusForDisplay(bien.etat)}
                 </p>
               )}
-              {bien.localisation && (
-                <p className="text-gray-500 dark:text-slate-400 inline-flex items-center gap-1">
-                  <AppIcon icon={MapPinIcon} size="xs" />
-                  {bien.localisation}
-                </p>
-              )}
+              <p className="text-gray-500 dark:text-slate-400 inline-flex items-center gap-1">
+                <AppIcon icon={MapPinIcon} size="xs" />
+                {/* ✅ CORRECTION : Utiliser getLocalisationName */}
+                {getLocalisationName(bien.localisation)}
+              </p>
               <button
                 type="button"
                 onClick={() => navigate(`/biens/${bien.id_bien}?panne_id=${panne.id_panne}`)}
@@ -303,9 +333,9 @@ const FichePanne = () => {
             {t('pannes.fiche.details')}
           </h3>
           <div className="space-y-2 text-sm">
-            <p><span className="text-gray-500 dark:text-slate-400">{t('pannes.fiche.type')}:</span> {panne.type_panne}</p>
+            <p><span className="text-gray-500 dark:text-slate-400">{t('pannes.fiche.type')}:</span> {panne.type_panne_personnalise || panne.type_panne}</p>
             <p><span className="text-gray-500 dark:text-slate-400">{t('pannes.fiche.priority')}:</span> {panne.priorite}</p>
-            <p><span className="text-gray-500 dark:text-slate-400">{t('pannes.fiche.declaredBy')}:</span> {t('pannes.fiche.technician', { id: panne.id_technicien })}</p>
+            <p><span className="text-gray-500 dark:text-slate-400">{t('pannes.fiche.declaredBy')}:</span> {panne.demandeur ? `${panne.demandeur.prenom} ${panne.demandeur.nom}` : (panne.id_technicien ? t('pannes.fiche.technician', { id: panne.id_technicien }) : '—')}</p>
             {panne.date_debut && (
               <p><span className="text-gray-500 dark:text-slate-400">{t('pannes.fiche.start')}:</span> {formatDate(panne.date_debut)}</p>
             )}
@@ -430,11 +460,11 @@ const FichePanne = () => {
         <div className="p-6">
           {/* Onglet Détails */}
           {activeTab === 'details' && (
-            <div className="app-page">
+            <div className="space-y-4">
               <div>
                 <h3 className="font-semibold text-gray-700 dark:text-slate-300 mb-2">{t('pannes.fiche.descriptionTitle')}</h3>
                 <p className="text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-800/50 p-4 rounded-lg">
-                  {panne.description}
+                  {panne.description || 'Aucune description'}
                 </p>
               </div>
 
@@ -505,7 +535,7 @@ const FichePanne = () => {
 
           {/* Onglet Besoins */}
           {activeTab === 'besoins' && (
-            <div className="app-page">
+            <div className="space-y-4">
               {besoins.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-slate-400">
                   <p>{t('pannes.fiche.noNeeds')}</p>

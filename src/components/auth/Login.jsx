@@ -71,7 +71,7 @@ const Login = () => {
       <div className="af-auth__panel-body">
         <header className="af-auth__header">
           <span className="af-auth__badge">ENTERPRISE</span>
-          <h2 className="af-auth__title">Bienvenue sur AssetFlow</h2>
+          <h2 className="af-auth__title">Bienvenue sur OKAPI Immobilisation</h2>
           <p className="af-auth__subtitle">Connectez-vous pour gérer vos immobilisations</p>
         </header>
 

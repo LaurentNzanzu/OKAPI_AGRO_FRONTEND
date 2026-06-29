@@ -8,9 +8,10 @@ export const biensService = {
    * Récupère la liste des biens avec pagination et filtres
    */
   getAll: async (params = {}) => {
-    const { page = 1, limit = 10, type_bien, etat, search } = params;
+    const { page = 1, limit = 10, skip, type_bien, etat, search } = params;
+    const skipVal = skip !== undefined ? skip : (page - 1) * limit;
     const queryParams = new URLSearchParams({
-      skip: String((page - 1) * limit),
+      skip: String(skipVal),
       limit: String(limit),
       ...(type_bien && { type_bien }),
       ...(etat && { etat }),
@@ -37,16 +38,6 @@ export const biensService = {
 
   /**
    * Crée un nouveau bien avec génération automatique de l'écriture comptable
-   * @param {Object} bienData - Données du bien
-   * @param {string} bienData.type_bien - Type de bien (vehicule, machine, ordinateur)
-   * @param {string} bienData.date_acquisition - Date d'acquisition (YYYY-MM-DD)
-   * @param {number} bienData.prix_acquisition - Prix d'acquisition
-   * @param {string} bienData.mode_paiement - Mode de paiement (credit ou comptant)
-   * @param {number} bienData.fournisseur_id - ID du fournisseur (requis si mode_paiement=credit)
-   * @param {string} bienData.devise - Devise (FCFA, CDF, USD, EUR)
-   * @param {string} bienData.etat - État du bien (NEUF, BON, USAGE, etc.)
-   * @param {string} bienData.localisation - Localisation
-   * @param {string} bienData.description - Description
    */
   create: async (bienData) => {
     const response = await api.post(BIENS_ENDPOINT, bienData);
@@ -103,6 +94,66 @@ export const biensService = {
     const response = await api.get(`${BIENS_ENDPOINT}/${id}/age`);
     return response.data;
   },
+
+  // ============================================================
+  // NOUVELLES MÉTHODES POUR LA TÂCHE 2 - CESSION
+  // ============================================================
+
+  /**
+   * Vérifie l'éligibilité d'un bien à la cession (4 règles)
+   * @param {number} bienId - ID du bien
+   */
+  verifierEligibiliteCession: async (bienId) => {
+    const response = await api.get(`${BIENS_ENDPOINT}/${bienId}/cession/eligibilite`);
+    return response.data;
+  },
+
+  /**
+   * Récupère la liste des biens éligibles à la cession
+   */
+  getBiensEligiblesCession: async () => {
+    const response = await api.get(`${BIENS_ENDPOINT}/eligibles-cession`);
+    return response.data;
+  },
+
+  /**
+   * Demande une cession pour un bien
+   * @param {number} bienId - ID du bien
+   * @param {Object} data - Données de la cession
+   * @param {number} data.prix_vente - Prix de vente
+   * @param {string} data.date_cession - Date de cession (YYYY-MM-DD)
+   * @param {string} data.type_cession - Type de cession (courante, non_courante, mise_au_rebut)
+   * @param {string} data.motif - Motif de la cession
+   * @param {number} data.actif_remplacement_id - ID du bien de remplacement (optionnel)
+   * @param {string} data.acheteur - Nom de l'acheteur (optionnel)
+   * @param {string} data.mode_reglement - Mode de règlement (optionnel)
+   * @param {string} data.piece_justificative_url - URL de la pièce justificative (optionnel)
+   */
+  demanderCession: async (bienId, data) => {
+    const response = await api.post(`${BIENS_ENDPOINT}/${bienId}/cession`, data);
+    return response.data;
+  },
+
+  /**
+   * Récupère le statut du workflow de cession d'un bien
+   * @param {number} bienId - ID du bien
+   */
+  getCessionWorkflow: async (bienId) => {
+    const response = await api.get(`${BIENS_ENDPOINT}/${bienId}/cession/workflow`);
+    return response.data;
+  },
+
+  /**
+   * Lie un bien de remplacement à un bien cédé
+   * @param {number} bienCedeId - ID du bien cédé
+   * @param {number} bienRemplacementId - ID du bien de remplacement
+   */
+  lierActifRemplacement: async (bienCedeId, bienRemplacementId) => {
+    const response = await api.patch(`${BIENS_ENDPOINT}/${bienCedeId}/lier-remplacement`, {
+      bien_remplacement_id: bienRemplacementId
+    });
+    return response.data;
+  }
 };
 
 export default biensService;

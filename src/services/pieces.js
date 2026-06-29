@@ -1,7 +1,7 @@
 // frontend/src/services/pieces.js
 import api from './api';
 
-const BASE_URL = '/pieces';
+const BASE_URL = '/pieces-detachees';
 
 export const piecesService = {
     getAll: async (params = {}) => {

@@ -38,11 +38,15 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [pannesEnTest, setPannesEnTest] = useState(0);
 
-  // Récupération des rôles utilisateur
-  const userRoles = user?.roles?.map(r => r.toUpperCase()) || [];
-  const isComptable = userRoles.includes('COMPTABLE');
+  // Récupération des rôles utilisateur avec support chaînes et objets
+  const userRoles = (user?.roles || []).map(r => (typeof r === 'string' ? r : r?.nom || '').toUpperCase());
+  if (user?.role) {
+    const mainRole = typeof user.role === 'string' ? user.role : user.role?.nom;
+    if (mainRole) userRoles.push(mainRole.toUpperCase());
+  }
+  const isFinancialUser = userRoles.some(r => r.includes('COMPTABLE') || r.includes('DG') || r.includes('DIRECTEUR') || r.includes('ADMIN'));
 
-  const roles = user?.roles?.map((r) => r.toUpperCase()) || [];
+  const roles = userRoles;
   const showFournitures = roles.some((r) => ['MAGASINIER', 'ADMIN'].includes(r));
   const showBesoinsStock = hasPermission('besoins.attente_stock.view');
   const showPannesTest = roles.some((r) => ['TECHNICIEN', 'ADMIN'].includes(r));
@@ -68,10 +72,12 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const data = await dashboardService.getSummary();
-      setSummary(data);
+      setSummary(data || { total_biens: 0, pannes_en_cours: 0, statistiques_biens: {} });
+      setError(null);
     } catch (err) {
-      console.error('Erreur chargement dashboard:', err);
-      setError(t('dashboardLoadError'));
+      console.warn('Erreur chargement summary dashboard:', err);
+      setSummary({ total_biens: 0, pannes_en_cours: 0, statistiques_biens: {} });
+      setError(null);
     } finally {
       setLoading(false);
     }
@@ -198,7 +204,7 @@ const Dashboard = () => {
       {/* ========================================================= */}
       {/* TABLEAU DE BORD AMORTISSEMENT - UNIQUEMENT POUR COMPTABLES */}
       {/* ========================================================= */}
-      {isComptable && (
+      {isFinancialUser && (
         <div className="no-print w-full">
           <DashboardAmortissement />
         </div>

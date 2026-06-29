@@ -56,9 +56,6 @@ export const ROLE_PERMISSIONS = {
     'biens.update',
     'biens.validate',
     'biens.reject',
-    'pieces.view',
-    'pieces.create',
-    'pieces.update',
     'amortissements.view',
     'amortissements.generate',
     'amortissements.update',
@@ -175,6 +172,9 @@ export const ROUTE_PERMISSIONS = {
   '/maintenances/en-retard': 'maintenances.view',
   '/validations': 'validations.view',
   '/validations/historique': 'validations.view',
+  '/caisse': 'validations.view',
+  '/budgets': 'validations.view',
+  '/budgets-page': 'validations.view',
   '/amortissements': 'amortissements.view',
   '/amortissements/nouveau': 'amortissements.generate',
   '/amortissements/ecritures': 'amortissements.ecritures',
@@ -190,6 +190,9 @@ export const ROUTE_PERMISSIONS = {
   '/rapports/financiers': 'rapports.financiers.view',
   '/rapports/techniques': 'rapports.techniques.view',
   '/rapports/amortissements': 'rapports.amortissements.view',
+  '/rapports/tableau8': 'rapports.view',
+  '/rapports/previsions': 'rapports.view',
+  '/etats': 'rapports.view',
   '/notifications': 'notifications.history.view',
   '/audit/journal': 'audit.view',
   '/audit/journal-audit': 'audit.view',
@@ -370,6 +373,9 @@ export function resolveRoutePermission(pathname) {
   
   // ✅ PLAN COMPTABLE - Routes dynamiques
   if (pathname.startsWith('/plan-comptable')) return 'plan_comptable.view';
+  if (pathname.startsWith('/budgets')) return 'validations.view';
+  if (pathname.startsWith('/rapports/')) return 'rapports.view';
+  if (pathname.startsWith('/etats')) return 'rapports.view';
 
   if (import.meta.env.DEV) {
     console.warn(`Permission non définie pour ${pathname}, accès refusé par défaut`);

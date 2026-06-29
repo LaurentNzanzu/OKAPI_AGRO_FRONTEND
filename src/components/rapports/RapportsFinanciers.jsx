@@ -157,21 +157,21 @@ const RapportsFinanciers = () => {
               <div className="bg-primary-50 dark:bg-primary-900/20 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-slate-400">Valeur totale d'acquisition</p>
                 <p className="text-2xl font-bold text-primary-700 dark:text-primary-300">
-                  {formatNumber(data.patrimoine.valeur_totale_acquisition)} FCFA
+                  {formatNumber(data.patrimoine.valeur_totale_acquisition)} USD
                 </p>
                 <p className="text-xs text-gray-400">{data.patrimoine.total_biens} biens</p>
               </div>
               <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-slate-400">Valeur nette comptable (VNC)</p>
                 <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                  {formatNumber(data.amortissements.valeur_nette_comptable_totale)} FCFA
+                  {formatNumber(data.amortissements.valeur_nette_comptable_totale)} USD
                 </p>
-                <p className="text-xs text-gray-400">Cumul amortissements: {formatNumber(data.amortissements.cumul_total_amortissements)} FCFA</p>
+                <p className="text-xs text-gray-400">Cumul amortissements: {formatNumber(data.amortissements.cumul_total_amortissements)} USD</p>
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-slate-400">Dotations amortissements (N)</p>
                 <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                  {formatNumber(data.amortissements.dotations_exercice)} FCFA
+                  {formatNumber(data.amortissements.dotations_exercice)} USD
                 </p>
                 <p className="text-xs text-gray-400">Exercice {data.periode.exercice}</p>
               </div>
@@ -185,7 +185,7 @@ const RapportsFinanciers = () => {
                   {Object.entries(data.patrimoine.repartition_par_type).map(([type, values]) => (
                     <div key={type} className="flex justify-between text-sm border-b border-gray-100 dark:border-gray-700 py-1">
                       <span className="capitalize">{type || 'Autre'}</span>
-                      <span>{values.count} biens — {formatNumber(values.valeur)} FCFA</span>
+                      <span>{values.count} biens — {formatNumber(values.valeur)} USD</span>
                     </div>
                   ))}
                 </div>
@@ -212,21 +212,21 @@ const RapportsFinanciers = () => {
               <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-slate-400">Coût des pannes</p>
                 <p className="text-2xl font-bold text-red-700 dark:text-red-300">
-                  {formatNumber(data.charges_cycle_vie.pannes.cout_total)} FCFA
+                  {formatNumber(data.charges_cycle_vie.pannes.cout_total)} USD
                 </p>
                 <p className="text-xs text-gray-400">{data.charges_cycle_vie.pannes.total} pannes</p>
               </div>
               <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-slate-400">Coût des maintenances</p>
                 <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">
-                  {formatNumber(data.charges_cycle_vie.maintenances.cout_total)} FCFA
+                  {formatNumber(data.charges_cycle_vie.maintenances.cout_total)} USD
                 </p>
                 <p className="text-xs text-gray-400">{data.charges_cycle_vie.maintenances.total} maintenances</p>
               </div>
               <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-slate-400">Total des charges</p>
                 <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
-                  {formatNumber(data.charges_cycle_vie.total_charges)} FCFA
+                  {formatNumber(data.charges_cycle_vie.total_charges)} USD
                 </p>
               </div>
             </div>
@@ -251,9 +251,9 @@ const RapportsFinanciers = () => {
                       {data.charges_cycle_vie.top_biens_cout.map((bien) => (
                         <tr key={bien.id_bien}>
                           <td className="px-3 py-2">{bien.designation}</td>
-                          <td className="px-3 py-2 text-right">{formatNumber(bien.cout_pannes)} FCFA</td>
-                          <td className="px-3 py-2 text-right">{formatNumber(bien.cout_maintenances)} FCFA</td>
-                          <td className="px-3 py-2 text-right font-medium">{formatNumber(bien.cout_total)} FCFA</td>
+                          <td className="px-3 py-2 text-right">{formatNumber(bien.cout_pannes)} USD</td>
+                          <td className="px-3 py-2 text-right">{formatNumber(bien.cout_maintenances)} USD</td>
+                          <td className="px-3 py-2 text-right font-medium">{formatNumber(bien.cout_total)} USD</td>
                         </tr>
                       ))}
                     </tbody>
@@ -274,11 +274,11 @@ const RapportsFinanciers = () => {
               </div>
               <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-slate-400">Plus-values</p>
-                <p className="text-2xl font-bold text-green-700">{formatNumber(data.cessions_mouvements.plus_values)} FCFA</p>
+                <p className="text-2xl font-bold text-green-700">{formatNumber(data.cessions_mouvements.plus_values)} USD</p>
               </div>
               <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-slate-400">Moins-values</p>
-                <p className="text-2xl font-bold text-red-700">{formatNumber(data.cessions_mouvements.moins_values)} FCFA</p>
+                <p className="text-2xl font-bold text-red-700">{formatNumber(data.cessions_mouvements.moins_values)} USD</p>
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-slate-400">Biens mis au rebut</p>
@@ -304,10 +304,10 @@ const RapportsFinanciers = () => {
                       {data.cessions_mouvements.details_cessions.map((c) => (
                         <tr key={c.id_cession}>
                           <td className="px-3 py-2">{c.designation}</td>
-                          <td className="px-3 py-2 text-right">{formatNumber(c.vnc)} FCFA</td>
-                          <td className="px-3 py-2 text-right">{formatNumber(c.prix_vente)} FCFA</td>
+                          <td className="px-3 py-2 text-right">{formatNumber(c.vnc)} USD</td>
+                          <td className="px-3 py-2 text-right">{formatNumber(c.prix_vente)} USD</td>
                           <td className={`px-3 py-2 text-right font-medium ${c.resultat >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatNumber(c.resultat)} FCFA
+                            {formatNumber(c.resultat)} USD
                           </td>
                         </tr>
                       ))}
@@ -329,15 +329,15 @@ const RapportsFinanciers = () => {
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
                 <p className="text-xs text-gray-500">Valeur brute</p>
-                <p className="text-lg font-bold">{formatNumber(data.tableau_amortissements.total_valeur_origine)} FCFA</p>
+                <p className="text-lg font-bold">{formatNumber(data.tableau_amortissements.total_valeur_origine)} USD</p>
               </div>
               <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
                 <p className="text-xs text-gray-500">Dotation N</p>
-                <p className="text-lg font-bold">{formatNumber(data.tableau_amortissements.total_annuite_exercice)} FCFA</p>
+                <p className="text-lg font-bold">{formatNumber(data.tableau_amortissements.total_annuite_exercice)} USD</p>
               </div>
               <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
                 <p className="text-xs text-gray-500">VNC</p>
-                <p className="text-lg font-bold">{formatNumber(data.tableau_amortissements.total_valeur_nette_comptable)} FCFA</p>
+                <p className="text-lg font-bold">{formatNumber(data.tableau_amortissements.total_valeur_nette_comptable)} USD</p>
               </div>
             </div>
 
@@ -395,7 +395,7 @@ const RapportsFinanciers = () => {
                   {data.notes_annexes.note_3a.details.map((item) => (
                     <div key={item.categorie} className="flex justify-between text-sm border-b border-gray-100 dark:border-gray-700 py-1">
                       <span className="capitalize">{item.categorie}</span>
-                      <span>{item.nombre_biens} biens — {formatNumber(item.valeur_brute)} FCFA</span>
+                      <span>{item.nombre_biens} biens — {formatNumber(item.valeur_brute)} USD</span>
                     </div>
                   ))}
                 </div>
@@ -407,11 +407,11 @@ const RapportsFinanciers = () => {
                 <div className="space-y-1">
                   <div className="flex justify-between text-sm py-1">
                     <span>Dotation de l'exercice</span>
-                    <span className="font-medium">{formatNumber(data.notes_annexes.note_3c.details.dotation_exercice)} FCFA</span>
+                    <span className="font-medium">{formatNumber(data.notes_annexes.note_3c.details.dotation_exercice)} USD</span>
                   </div>
                   <div className="flex justify-between text-sm py-1 border-t border-gray-100">
                     <span>Cumul des amortissements</span>
-                    <span className="font-medium">{formatNumber(data.notes_annexes.note_3c.details.cumul_amortissements)} FCFA</span>
+                    <span className="font-medium">{formatNumber(data.notes_annexes.note_3c.details.cumul_amortissements)} USD</span>
                   </div>
                 </div>
               </div>
@@ -422,16 +422,16 @@ const RapportsFinanciers = () => {
                 <div className="space-y-1">
                   <div className="flex justify-between text-sm py-1">
                     <span>Plus-values</span>
-                    <span className="text-green-600 font-medium">{formatNumber(data.notes_annexes.note_3d.details.plus_values)} FCFA</span>
+                    <span className="text-green-600 font-medium">{formatNumber(data.notes_annexes.note_3d.details.plus_values)} USD</span>
                   </div>
                   <div className="flex justify-between text-sm py-1">
                     <span>Moins-values</span>
-                    <span className="text-red-600 font-medium">{formatNumber(data.notes_annexes.note_3d.details.moins_values)} FCFA</span>
+                    <span className="text-red-600 font-medium">{formatNumber(data.notes_annexes.note_3d.details.moins_values)} USD</span>
                   </div>
                   <div className="flex justify-between text-sm py-1 border-t border-gray-100">
                     <span>Résultat net</span>
                     <span className={`font-medium ${data.notes_annexes.note_3d.details.resultat_net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatNumber(data.notes_annexes.note_3d.details.resultat_net)} FCFA
+                      {formatNumber(data.notes_annexes.note_3d.details.resultat_net)} USD
                     </span>
                   </div>
                 </div>
@@ -447,7 +447,7 @@ const RapportsFinanciers = () => {
                   </div>
                   <div className="flex justify-between text-sm py-1">
                     <span>Valeur totale</span>
-                    <span>{formatNumber(data.notes_annexes.note_3b.details.valeur_totale)} FCFA</span>
+                    <span>{formatNumber(data.notes_annexes.note_3b.details.valeur_totale)} USD</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">{data.notes_annexes.note_3b.details.commentaire}</p>
                 </div>

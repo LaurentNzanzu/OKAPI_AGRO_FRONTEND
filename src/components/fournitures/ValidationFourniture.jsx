@@ -10,18 +10,17 @@ import { validateQuantiteFournie } from '../../utils/workflowEnums';
 import { useTranslation } from '../../context/LanguageContext';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
-/**
- * Modal de validation d'une ligne de fourniture.
- */
 const ValidationFourniture = ({ idFourniture: idProp, onClose }) => {
   const { t } = useTranslation();
   const { id: idParam } = useParams();
   const idFourniture = idProp ?? idParam;
   const navigate = useNavigate();
+
   const handleClose = onClose || ((success) => {
     if (success) navigate('/fournitures/en-attente');
     else navigate(-1);
   });
+
   const [fourniture, setFourniture] = useState(null);
   const [besoin, setBesoin] = useState(null);
   const [panne, setPanne] = useState(null);
@@ -46,6 +45,7 @@ const ValidationFourniture = ({ idFourniture: idProp, onClose }) => {
       const list = await fournituresService.getEnAttente();
       const f = list.find((x) => x.id_fourniture === Number(idFourniture));
       if (!f) throw new Error(t('fournituresValidation.notFound'));
+      
       setFourniture(f);
       setQuantite(String(f.quantite_demandee));
 
@@ -118,8 +118,13 @@ const ValidationFourniture = ({ idFourniture: idProp, onClose }) => {
   const supplyState = isPartial
     ? t('fournituresValidation.statePartial')
     : qteNum === fourniture?.quantite_demandee
-      ? t('fournituresValidation.stateComplete')
-      : '—';
+    ? t('fournituresValidation.stateComplete')
+    : '—';
+
+  // ✅ Extraction sécurisée de la localisation (objet ou string)
+  const localisationLabel = typeof bien?.localisation === 'object' 
+    ? bien.localisation?.nom_localisation || '—'
+    : bien?.localisation || '—';
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
@@ -151,7 +156,8 @@ const ValidationFourniture = ({ idFourniture: idProp, onClose }) => {
             {bien && (
               <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4 mb-4 text-sm">
                 <p><strong>{t('fournituresValidation.asset')}:</strong> {bien.marque || bien.fabricant} {bien.modele}</p>
-                <p><strong>{t('fournituresValidation.location')}:</strong> {bien.localisation || '—'}</p>
+                {/* ✅ CORRECTION : Utilisation de localisationLabel au lieu de bien.localisation */}
+                <p><strong>{t('fournituresValidation.location')}:</strong> {localisationLabel}</p>
                 <p><strong>{t('fournituresValidation.state')}:</strong> {bien.etat}</p>
               </div>
             )}

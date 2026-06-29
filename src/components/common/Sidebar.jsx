@@ -17,6 +17,7 @@ import {
   MagnifyingGlassIcon,
   Cog8ToothIcon,
   XMarkIcon,
+  BanknotesIcon,
 } from '../ui/icons';
 
 const renderMenuIcon = (Icon) => (
@@ -31,25 +32,28 @@ const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(window.innerWidth >= 1024);
   const [activeSubmenu, setActiveSubmenu] = useState(null);
 
-  // ✅ Fonction intelligente pour vérifier les rôles (insensible à la casse et aux espaces)
+  // ✅ Fonction intelligente pour vérifier les rôles (insensible à la casse et aux objets)
   const hasRequiredRole = (roles) => {
     if (!roles || roles.length === 0) return true;
-    if (!user || !user.roles) return false;
+    if (hasAnyRole && hasAnyRole(roles)) return true;
+    if (!user) return false;
     
-    // Normaliser les rôles de l'utilisateur
     let userRoles = [];
-    if (Array.isArray(user.roles)) {
+    if (Array.isArray(user.roles) && user.roles.length > 0) {
       userRoles = user.roles;
     } else if (typeof user.roles === 'string') {
       userRoles = [user.roles];
     } else if (user.role) {
-      userRoles = [user.role];
+      if (typeof user.role === 'object' && user.role.nom) {
+        userRoles = [user.role.nom];
+      } else {
+        userRoles = [user.role];
+      }
+    } else if (user.role_nom) {
+      userRoles = [user.role_nom];
     }
     
-    // Normaliser : trim + uppercase
     userRoles = userRoles.map(r => String(r).trim().toUpperCase());
-    
-    // Vérifier si au moins un rôle correspond
     return roles.some(requiredRole => {
       const normalizedRequired = String(requiredRole).trim().toUpperCase();
       return userRoles.includes(normalizedRequired);
@@ -133,7 +137,13 @@ const Sidebar = () => {
       title: 'Validations',
       path: '/validations',
       Icon: ShieldCheckIcon,
-      roles: ['ADMIN', 'DG', 'COMPTABLE'],
+      roles: ['ADMIN', 'DG', 'COMPTABLE', 'CAISSE'],
+    },
+    {
+      title: 'Gestion Caisse',
+      path: '/caisse',
+      Icon: BanknotesIcon,
+      roles: ['CAISSE', 'ADMIN', 'DG'],
     },
     {
       title: 'Pièces',

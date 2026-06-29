@@ -126,7 +126,7 @@
     "reprise": {
       "title": "Reprise de dépréciation",
       "success": "Reprise enregistrée. Écriture {{debit}}/{{credit}}. Nouveau cumul : {{cumul}}",
-      "amountLabel": "Montant à reprendre (FCFA) *",
+      "amountLabel": "Montant à reprendre (USD) *",
       "motifLabel": "Motif *",
       "motifPlaceholder": "Raison de la reprise...",
       "confirmBtn": "Confirmer la reprise",

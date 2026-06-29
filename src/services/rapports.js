@@ -118,11 +118,90 @@ export const exporterRapport = async (typeRapport, format, params) => {
     return { success: true, filename };
 };
 
+// ============================================================
+// NOUVEAUX SERVICES TÂCHE 3
+// ============================================================
+
+/**
+ * Génère le Tableau 8 OHADA pour une année donnée
+ */
+export const generateTableau8 = async (annee) => {
+    const response = await api.get(`/rapports/tableau-8`, { params: { annee } });
+    return response.data;
+};
+
+/**
+ * Récupère les projections d'investissement N+1 à N+5
+ */
+export const getProjections = async () => {
+    const response = await api.get('/rapports/projections');
+    return response.data;
+};
+
+/**
+ * Récupère le journal des immobilisations d'un bien
+ */
+export const getJournalImmobilisations = async (bienId) => {
+    const response = await api.get(`/rapports/journal-immobilisations/${bienId}`);
+    return response.data;
+};
+
+/**
+ * Exporte les données du Tableau 8 en CSV
+ */
+export const exportCSV = (data, filename) => {
+    if (!data || !data.categories) {
+        console.error('Données invalides pour l\'export CSV');
+        return;
+    }
+    
+    // En-têtes CSV
+    let csv = 'Catégorie;Brut début;Augmentations;Diminutions;Brut fin;Amortissements cumulés;Dotations exercice;VNC fin\n';
+    
+    // Lignes par catégorie
+    Object.entries(data.categories).forEach(([cat, vals]) => {
+        csv += `${cat};${vals.brut_debut};${vals.augmentations};${vals.diminutions};${vals.brut_fin};${vals.amortissements_cumules};${vals.dotations_exercice};${vals.vnc_fin}\n`;
+    });
+    
+    // Ligne de total
+    csv += `TOTAL;${data.total_general.brut_debut};${data.total_general.augmentations};${data.total_general.diminutions};${data.total_general.brut_fin};${data.total_general.amortissements_cumules};${data.total_general.dotations_exercice};${data.total_general.vnc_fin}\n`;
+    
+    // Ajouter une ligne vide et les informations de cohérence
+    csv += '\n';
+    csv += `Cohérent avec le Grand Livre;${data.coherent ? 'OUI' : 'NON'}\n`;
+    if (!data.coherent && data.ecart) {
+        csv += `Écart constaté;${data.ecart}\n`;
+    }
+    
+    // Télécharger
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+};
+
+export const exportTableau8PDF = async (annee) => {
+    const response = await api.get(`/rapports/tableau-8/export-pdf`, {
+        params: { annee },
+        responseType: 'blob'
+    });
+    return response;
+};
+
 export default {
     getRapportFinancier,
     getRapportTechnique,
     getRapportAmortissements,
     getRapportFinancierOHADA,
     exportRapportOHADA,
-    exporterRapport
+    exporterRapport,
+    generateTableau8,
+    exportTableau8PDF,
+    getProjections,
+    getJournalImmobilisations,
+    exportCSV
 };

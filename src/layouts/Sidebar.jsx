@@ -21,6 +21,8 @@ import {
   PuzzlePieceIcon,
   BellIcon,
   ArchiveBoxIcon,
+  BanknotesIcon,
+  CurrencyDollarIcon,
 } from '@heroicons/react/24/outline';
 
 const linkBase = 'flex items-center gap-3 rounded-lg text-sm font-medium transition-colors';
@@ -36,10 +38,39 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
   const [openMenus, setOpenMenus] = useState({});
 
   const hasRole = (roles) => {
-    if (!roles || roles.length === 0) return true;
-    if (!user?.roles) return false;
-    const userRoles = user.roles.map((r) => r.toUpperCase());
-    return roles.some((role) => userRoles.includes(role.toUpperCase()));
+    // Cas où aucun rôle n'est requis
+    if (!roles) return true;
+    
+    // Normaliser en tableau
+    const rolesArray = Array.isArray(roles) ? roles : [roles];
+    if (rolesArray.length === 0) return true;
+    
+    // Vérifier l'utilisateur
+    if (!user) return false;
+    
+    // Normaliser les rôles de l'utilisateur
+    let userRolesArray = [];
+    if (Array.isArray(user.roles) && user.roles.length > 0) {
+      userRolesArray = user.roles.map((r) => String(r).trim().toUpperCase()).filter(Boolean);
+    } else if (typeof user.roles === 'string') {
+      userRolesArray = [user.roles.trim().toUpperCase()];
+    } else if (user.role) {
+      if (typeof user.role === 'object' && user.role.nom) {
+        userRolesArray = [String(user.role.nom).trim().toUpperCase()];
+      } else {
+        userRolesArray = [String(user.role).trim().toUpperCase()];
+      }
+    } else if (user.role_nom) {
+      userRolesArray = [String(user.role_nom).trim().toUpperCase()];
+    }
+    
+    if (userRolesArray.length === 0) return false;
+    
+    // Vérifier les rôles
+    return rolesArray.some((role) => {
+      const roleUpper = String(role).trim().toUpperCase();
+      return userRolesArray.includes(roleUpper);
+    });
   };
 
   const canAccessPath = (path) => {
@@ -48,6 +79,12 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
   };
 
   const canAccessItem = (item) => {
+    if (hasRole('COMPTABLE')) {
+      if (item.path === '/scan' || item.labelKey === 'navScan') return false;
+      if (item.labelKey === 'navSpareParts') return false;
+    }
+    if (hasRole('ADMIN') && item.labelKey === 'navFournitures') return false;
+
     if (!hasRole(item.roles)) return false;
     if (item.permission && !hasPermission(item.permission)) return false;
     if (item.path) return canAccessPath(item.path);
@@ -153,6 +190,20 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
       ],
     },
     {
+      labelKey: 'navCaisse',
+      path: '/caisse',
+      icon: BanknotesIcon,
+      roles: ['CAISSE', 'ADMIN', 'DG'],
+      permission: 'validations.view',
+    },
+    {
+      labelKey: 'navBudgets',
+      path: '/budgets',
+      icon: CurrencyDollarIcon,
+      roles: ['COMPTABLE', 'ADMIN', 'DG'],
+      permission: 'validations.view',
+    },
+    {
       labelKey: 'navDepreciation',
       icon: CalculatorIcon,
       roles: ['ADMIN', 'COMPTABLE'],
@@ -161,7 +212,8 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
         { labelKey: 'navHistory', path: '/amortissements', roles: ['ADMIN', 'COMPTABLE'] },
         { labelKey: 'navAccountingEntries', path: '/amortissements/ecritures', roles: ['COMPTABLE'] },
         { labelKey: 'navDepreciationRules', path: '/amortissements/regles', roles: ['COMPTABLE'] },
-        { labelKey: 'navPlanComptable', path: 'plan-comptable', roles: ['COMPTABLE', 'ADMIN'] },
+        { labelKey: 'navPlanComptable', path: '/plan-comptable', roles: ['COMPTABLE', 'ADMIN'] },
+        { labelKey: 'navCloture', path: '/amortissements/cloture', roles: ['ADMIN', 'COMPTABLE'] },
       ],
     },
     {
@@ -173,6 +225,9 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
         { labelKey: 'navFinancialReport', path: '/rapports/financiers', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
         { labelKey: 'navTechnicalReport', path: '/rapports/techniques', roles: ['ADMIN', 'DG', 'COMPTABLE', 'TECHNICIEN'] },
         { labelKey: 'navDepreciationReport', path: '/rapports/amortissements', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
+        { labelKey: 'navTableau8', path: '/rapports/tableau8', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
+        { labelKey: 'navPrevisions', path: '/rapports/previsions', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
+        { labelKey: 'navEtats', path: '/etats', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
       ],
     },
     {
@@ -262,7 +317,10 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
                       bg-surface-light dark:bg-surface-dark shadow-dropdown rounded-lg border border-border-light dark:border-border-dark"
                   >
                     {item.children
-                      .filter((child) => hasRole(child.roles) && (!child.permission || hasPermission(child.permission)) && canAccessPath(child.path))
+                      .filter((child) => {
+                        if (hasRole('COMPTABLE') && child.labelKey === 'navPartsMgmt') return false;
+                        return hasRole(child.roles) && (!child.permission || hasPermission(child.permission)) && canAccessPath(child.path);
+                      })
                       .map((child, cidx) => (
                         <NavLink
                           key={cidx}
@@ -330,7 +388,10 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
                   {isOpenMenu && (
                     <div className="ml-9 mt-0.5 space-y-0.5">
                       {item.children
-                        .filter((child) => hasRole(child.roles) && (!child.permission || hasPermission(child.permission)) && canAccessPath(child.path))
+                        .filter((child) => {
+                          if (hasRole('COMPTABLE') && child.labelKey === 'navPartsMgmt') return false;
+                          return hasRole(child.roles) && (!child.permission || hasPermission(child.permission)) && canAccessPath(child.path);
+                        })
                         .map((child, cidx) => (
                           <NavLink
                             key={cidx}

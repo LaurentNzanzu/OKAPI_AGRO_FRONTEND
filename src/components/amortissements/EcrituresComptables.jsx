@@ -442,12 +442,11 @@ const EcrituresComptables = ({ bienId }) => {
                                 <div className="border-t pt-4">
                                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{t('amortissementsEcritures.amountLabel')}</label>
                                     <input
-                                        type="number"
-                                        step="0.01"
+                                        type="text"
                                         value={ajustementMontant}
-                                        onChange={(e) => setAjustementMontant(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg"
-                                        disabled={selectedEcriture.validee}
+                                        readOnly
+                                        disabled
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg bg-gray-100 dark:bg-slate-800/80 cursor-not-allowed font-semibold text-gray-700 dark:text-slate-300"
                                     />
                                 </div>
 
@@ -465,20 +464,12 @@ const EcrituresComptables = ({ bienId }) => {
 
                                 <div className="flex gap-3 pt-4">
                                     {!selectedEcriture.validee && (
-                                        <>
-                                            <button
-                                                onClick={() => handleModifierMontant(selectedEcriture.id_ecriture)}
-                                                className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
-                                            >
-                                                {t('amortissementsEcritures.adjustAmount')}
-                                            </button>
-                                            <button
-                                                onClick={() => handleValider(selectedEcriture.id_ecriture)}
-                                                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-                                            >
-                                                {t('amortissementsEcritures.validateDirect')}
-                                            </button>
-                                        </>
+                                        <button
+                                            onClick={() => handleValider(selectedEcriture.id_ecriture)}
+                                            className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+                                        >
+                                            {t('amortissementsEcritures.validateDirect')}
+                                        </button>
                                     )}
                                     <button
                                         onClick={() => setShowModal(false)}
