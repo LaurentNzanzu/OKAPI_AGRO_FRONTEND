@@ -47,28 +47,21 @@ const DashboardAmortissement = () => {
         try {
             setLoading(true);
             const result = await amortissementsService.getDashboard();
-            setData({
-                total_amortissements_exercice: result?.total_amortissements_exercice || 0,
-                ecart_fiscal_total: result?.ecart_fiscal_total || 0,
-                biens_fin_vie: result?.biens_fin_vie || 0,
-                ecritures_attente_validation: result?.ecritures_attente_validation || 0,
-                economie_impot_annuelle: result?.economie_impot_annuelle || 0,
-                repartition_par_categorie: result?.repartition_par_categorie || {},
-                annee_courante: result?.annee_courante || new Date().getFullYear()
-            });
-            setError(null);
+            if (result) {
+                setData({
+                    total_amortissements_exercice: Number(result.total_amortissements_exercice) || 0,
+                    ecart_fiscal_total: Number(result.ecart_fiscal_total) || 0,
+                    biens_fin_vie: Number(result.biens_fin_vie) || 0,
+                    ecritures_attente_validation: Number(result.ecritures_attente_validation) || 0,
+                    economie_impot_annuelle: Number(result.economie_impot_annuelle) || 0,
+                    repartition_par_categorie: result.repartition_par_categorie || {},
+                    annee_courante: result.annee_courante || new Date().getFullYear()
+                });
+                setError(null);
+            }
         } catch (err) {
-            console.warn('Chargement des indicateurs amortissements limité:', err);
-            setData({
-                total_amortissements_exercice: 0,
-                ecart_fiscal_total: 0,
-                biens_fin_vie: 0,
-                ecritures_attente_validation: 0,
-                economie_impot_annuelle: 0,
-                repartition_par_categorie: {},
-                annee_courante: new Date().getFullYear()
-            });
-            setError(null);
+            console.error('Erreur lors du chargement des indicateurs amortissements:', err);
+            setError(t('amortissementsDashboard.loadError', 'Erreur de chargement des indicateurs'));
         } finally {
             setLoading(false);
         }
@@ -78,6 +71,17 @@ const DashboardAmortissement = () => {
         return (
             <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-300 text-sm flex justify-between items-center">
+                <span>{error}</span>
+                <button onClick={fetchDashboard} className="px-3 py-1 bg-red-100 dark:bg-red-800 rounded text-xs font-medium hover:bg-red-200">
+                    {t('common.retry', 'Réessayer')}
+                </button>
             </div>
         );
     }
