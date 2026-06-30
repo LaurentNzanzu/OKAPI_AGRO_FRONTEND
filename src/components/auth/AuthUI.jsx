@@ -165,9 +165,11 @@ export const AuthHero = () => {
       onMouseLeave={handleMouseLeave}
     >
       <div className="af-auth__hero-inner">
-        <div className="af-auth__illustration-wrap" ref={illuRef}>
-          <HeroIllustration />
-        </div>
+        <Link to="/" className="af-auth__illustration-link" title="Retour à l'accueil">
+          <div className="af-auth__illustration-wrap" ref={illuRef}>
+            <HeroIllustration />
+          </div>
+        </Link>
         <h1 className="af-auth__hero-title">Optimisez la gestion de vos actifs</h1>
         <p className="af-auth__hero-text">
           Une solution complète pour le suivi, l&apos;inventaire et l&apos;amortissement de vos

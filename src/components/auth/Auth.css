@@ -105,6 +105,12 @@
   max-width: 440px;
 }
 
+.af-auth__illustration-link {
+  display: inline-block;
+  text-decoration: none;
+  border-radius: 24px;
+}
+
 .af-auth__illustration-wrap {
   width: 120px;
   height: 120px;

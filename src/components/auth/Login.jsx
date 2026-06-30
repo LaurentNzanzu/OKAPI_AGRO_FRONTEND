@@ -11,6 +11,7 @@ import {
   RememberToggle,
   MailIcon,
   LockIcon,
+  AuthBackLink,
 } from './AuthUI';
 
 const Login = () => {
@@ -131,6 +132,7 @@ const Login = () => {
           <hr className="af-auth__form-divider" aria-hidden />
 
           <AuthSubmitButton loading={loading}>Se connecter</AuthSubmitButton>
+          <AuthBackLink to="/">← Retour à l&apos;accueil</AuthBackLink>
         </form>
       </div>
       <AuthFooter />
