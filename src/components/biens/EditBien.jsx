@@ -11,6 +11,7 @@ import { ArrowBack, Save, Cancel, Warning } from '@mui/icons-material';
 import { biensService } from '../../services/biens';
 import usePermissions from '../../hooks/usePermissions';
 import { TYPE_BIEN_LABELS, CHAMPS_SPECIFIQUES } from '../../utils/constants';
+import { localisationsService } from '../../services/localisations';
 import {
   normalizeStatusForSelect,
   normalizeStatusForAPI,
@@ -31,8 +32,26 @@ const EditBien = () => {
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [localisations, setLocalisations] = useState([]);
+  const [localisationsLoading, setLocalisationsLoading] = useState(false);
 
   const steps = ['Informations générales', 'Caractéristiques spécifiques', 'Confirmation'];
+
+  // Chargement des localisations
+  useEffect(() => {
+    const loadLocalisations = async () => {
+      try {
+        setLocalisationsLoading(true);
+        const data = await localisationsService.getAll();
+        setLocalisations(data.localisations || []);
+      } catch (err) {
+        console.error('Erreur chargement localisations:', err);
+      } finally {
+        setLocalisationsLoading(false);
+      }
+    };
+    loadLocalisations();
+  }, []);
 
   // Chargement des données existantes
   useEffect(() => {
@@ -70,9 +89,10 @@ const EditBien = () => {
         date_acquisition: data.date_acquisition?.split('T')[0] || '',
         prix_acquisition: data.prix_acquisition?.toString() || '',
         etat: normalizeStatusForSelect(data.etat) || 'neuf',
-        localisation: data.localisation || '',
+        id_localisation: data.id_localisation || data.localisation?.id_localisation || '',
         description: data.description || '',
         image: data.image || null,
+        qr_code: data.qr_code || '',
         // Champs véhicule
         type_vehicule: data.type_vehicule || '',
         marque: data.marque || '',
@@ -105,6 +125,8 @@ const EditBien = () => {
       setOriginalData({
         ...data,
         etat: normalizeStatusForSelect(data.etat) || data.etat,
+        id_localisation: data.id_localisation || data.localisation?.id_localisation || '',
+        qr_code: data.qr_code || '',
       });
     } catch (err) {
       console.error('Erreur chargement bien:', err);
@@ -131,7 +153,7 @@ const EditBien = () => {
           newErrors.prix_acquisition = 'Prix valide requis';
         }
       }
-      if (!formData.localisation) newErrors.localisation = 'Requis';
+      if (!formData.id_localisation) newErrors.id_localisation = 'Requis';
     }
 
     if (step === 1 && formData.type_bien) {
@@ -174,8 +196,8 @@ const EditBien = () => {
       // Préparer le payload (ne garder que les champs modifiés et non vides)
       const payload = {};
       const commonFields = isTechnicianMode
-        ? ['etat', 'localisation', 'description']
-        : ['date_acquisition', 'prix_acquisition', 'etat', 'localisation', 'description'];
+        ? ['etat', 'id_localisation', 'description']
+        : ['date_acquisition', 'prix_acquisition', 'etat', 'id_localisation', 'description'];
       const specificFields = CHAMPS_SPECIFIQUES[formData.type_bien] || [];
       
       [...commonFields, ...specificFields].forEach(key => {
@@ -183,6 +205,8 @@ const EditBien = () => {
           payload[key] = formData[key];
         }
       });
+
+      if (payload.id_localisation) payload.id_localisation = parseInt(payload.id_localisation, 10);
 
       if (payload.etat) payload.etat = normalizeStatusForAPI(payload.etat);
       if (payload.prix_acquisition) payload.prix_acquisition = parseFloat(payload.prix_acquisition);
@@ -243,16 +267,26 @@ const EditBien = () => {
     
     const changes = [];
     const commonFields = isTechnicianMode
-      ? ['etat', 'localisation', 'description']
-      : ['date_acquisition', 'prix_acquisition', 'etat', 'localisation', 'description'];
+      ? ['etat', 'id_localisation', 'description']
+      : ['date_acquisition', 'prix_acquisition', 'etat', 'id_localisation', 'description'];
     const specificFields = CHAMPS_SPECIFIQUES[formData.type_bien] || [];
 
     [...commonFields, ...specificFields].forEach(key => {
       if (formData[key] !== originalData[key] && formData[key] !== '' && originalData[key] !== null) {
+        let oldVal = originalData[key];
+        let newVal = formData[key];
+
+        if (key === 'id_localisation') {
+          const oldLoc = localisations.find(l => String(l.id_localisation) === String(oldVal));
+          const newLoc = localisations.find(l => String(l.id_localisation) === String(newVal));
+          oldVal = oldLoc ? oldLoc.nom_localisation : oldVal;
+          newVal = newLoc ? newLoc.nom_localisation : newVal;
+        }
+
         changes.push({
-          field: key.replace(/_/g, ' '),
-          old: originalData[key],
-          new: formData[key]
+          field: key === 'id_localisation' ? 'localisation' : key.replace(/_/g, ' '),
+          old: oldVal,
+          new: newVal
         });
       }
     });
@@ -409,14 +443,23 @@ const EditBien = () => {
               </>
             )}
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Localisation *"
-                value={formData.localisation || ''}
-                onChange={e => handleChange('localisation', e.target.value)}
-                error={!!errors.localisation}
-                helperText={errors.localisation}
-              />
+              <FormControl fullWidth error={!!errors.id_localisation}>
+                <InputLabel id="localisation-label">Localisation *</InputLabel>
+                <Select
+                  labelId="localisation-label"
+                  value={formData.id_localisation || ''}
+                  label="Localisation *"
+                  onChange={e => handleChange('id_localisation', e.target.value)}
+                  disabled={localisationsLoading}
+                >
+                  {localisations.map(loc => (
+                    <MenuItem key={loc.id_localisation} value={loc.id_localisation}>
+                      {loc.nom_localisation}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.id_localisation && <FormHelperText>{errors.id_localisation}</FormHelperText>}
+              </FormControl>
             </Grid>
             <Grid item xs={12}>
               <TextField
