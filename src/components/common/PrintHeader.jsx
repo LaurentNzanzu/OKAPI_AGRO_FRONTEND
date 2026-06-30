@@ -1,7 +1,7 @@
 // frontend/src/components/common/PrintHeader.jsx
 import React from 'react';
 import { useTranslation } from '../../context/LanguageContext';
-import logoOkapi from '../../assets/Logo.jpeg';
+import logoOkapi from '../../assets/react.svg';
 
 const PrintHeader = ({ title, subtitle, documentRef, date, logoSrc = logoOkapi }) => {
   const { t } = useTranslation();
