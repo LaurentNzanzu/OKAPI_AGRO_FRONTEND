@@ -9,12 +9,14 @@ import Button from '../ui/Button';
 import {
   LockClosedIcon,
   LockOpenIcon,
+} from "@heroicons/react/24/outline";
+
+import {
+  AppIcon,
   DownloadIcon,
   PrinterIcon,
   CheckCircleIcon,
-} from '@heroicons/react/24/outline';
-import { AppIcon } from '../ui/icons';
-
+} from "../ui/icons";
 const TableauAmortissement = () => {
   const { t } = useTranslation();
   const { id } = useParams();
