@@ -160,6 +160,7 @@ const FicheBien = () => {
         canDeleteBien,
         canViewPurchasePrice,
         isTechnicianMode,
+        isTechnicien,
     } = usePermissions();
     const { fetchBienForContext } = useBienAccess();
 
@@ -777,28 +778,32 @@ const FicheBien = () => {
                         <Paper sx={{ p: 2 }}>
                             <Typography variant="subtitle2" gutterBottom>{t('assets.quickActions')}</Typography>
                             <Grid container spacing={1}>
-                                <Grid item xs={6}>
-                                    <Button
-                                        variant="outlined"
-                                        size="small"
-                                        fullWidth
-                                        startIcon={<Build />}
-                                        onClick={() => navigate(`/pannes/declarer?bien_id=${bien.id_bien}`)}
-                                    >
-                                        {t('assets.declareBreakdown')}
-                                    </Button>
-                                </Grid>
-                                <Grid item xs={6}>
-                                    <Button
-                                        variant="outlined"
-                                        size="small"
-                                        fullWidth
-                                        startIcon={<CheckCircle />}
-                                        onClick={() => navigate(`/maintenances/planning?bien_id=${bien.id_bien}`)}
-                                    >
-                                        {t('assets.planMaintenance')}
-                                    </Button>
-                                </Grid>
+                                {isTechnicien && (
+                                    <>
+                                        <Grid item xs={6}>
+                                            <Button
+                                                variant="outlined"
+                                                size="small"
+                                                fullWidth
+                                                startIcon={<Build />}
+                                                onClick={() => navigate(`/pannes/declarer?bien_id=${bien.id_bien}`)}
+                                            >
+                                                {t('assets.declareBreakdown')}
+                                            </Button>
+                                        </Grid>
+                                        <Grid item xs={6}>
+                                            <Button
+                                                variant="outlined"
+                                                size="small"
+                                                fullWidth
+                                                startIcon={<CheckCircle />}
+                                                onClick={() => navigate(`/maintenances/planning?bien_id=${bien.id_bien}`)}
+                                            >
+                                                {t('assets.planMaintenance')}
+                                            </Button>
+                                        </Grid>
+                                    </>
+                                )}
                                 <Grid item xs={12} sx={{ mt: 1 }}>
                                     <Button
                                         variant="outlined"

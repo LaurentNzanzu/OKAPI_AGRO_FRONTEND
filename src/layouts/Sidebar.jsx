@@ -193,7 +193,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
       labelKey: 'navCaisse',
       path: '/caisse',
       icon: BanknotesIcon,
-      roles: ['CAISSE', 'ADMIN', 'DG'],
+      roles: ['CAISSE', 'ADMIN', 'DG', 'COMPTABLE'],
       permission: 'validations.view',
     },
     {

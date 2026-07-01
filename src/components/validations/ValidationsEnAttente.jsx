@@ -33,17 +33,32 @@ const ValidationsEnAttente = () => {
         fetchAllData();
     }, []);
 
+    // frontend/src/pages/ValidationsEnAttente.jsx
     const fetchAllData = async () => {
         try {
             setLoading(true);
+            setError(null);
+
+            // 1. Appel API simple
+            const resAmort = await api.get('/amortissements');
+
+            // 2. Nettoyage des données (Sécurisation contre les valeurs non-numériques)
+            const data = resAmort.data || [];
+            const sanitizedData = data.map(item => ({
+                ...item,
+                // Force la conversion en nombre pour éviter l'erreur float_type
+                annuite_comptable: parseFloat(item.annuite_comptable) || 0
+            }));
+
+            setAmortissements(sanitizedData);
+
+            // 3. Chargement des besoins
             const dataBesoins = await validationsService.getEnAttente();
             setBesoins(dataBesoins.filter((b) => b.statut !== 'ATTENTE_STOCK'));
 
-            // Fetch amortissements list
-            const resAmort = await api.get('/amortissements');
-            setAmortissements(resAmort.data || []);
         } catch (err) {
-            setError(t('validationsLoadError') || "Erreur lors du chargement des validations");
+            console.error("Erreur API détaillée:", err.response?.data);
+            setError("Impossible de charger les données : format de nombre invalide reçu du serveur.");
         } finally {
             setLoading(false);
         }
@@ -88,22 +103,20 @@ const ValidationsEnAttente = () => {
             <div className="flex border-b border-gray-200 dark:border-slate-800 mb-6 bg-white dark:bg-slate-900 p-2 rounded-xl shadow-sm">
                 <button
                     onClick={() => setActiveTab('amortissements')}
-                    className={`flex-1 py-3 px-4 font-semibold text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${
-                        activeTab === 'amortissements'
+                    className={`flex-1 py-3 px-4 font-semibold text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'amortissements'
                             ? 'bg-primary-600 text-white shadow-md'
                             : 'text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800'
-                    }`}
+                        }`}
                 >
                     <ShieldCheckIcon className="w-5 h-5" />
                     <span>Workflow Amortissements ({amortissements.length})</span>
                 </button>
                 <button
                     onClick={() => setActiveTab('besoins')}
-                    className={`flex-1 py-3 px-4 font-semibold text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${
-                        activeTab === 'besoins'
+                    className={`flex-1 py-3 px-4 font-semibold text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'besoins'
                             ? 'bg-primary-600 text-white shadow-md'
                             : 'text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800'
-                    }`}
+                        }`}
                 >
                     <ClockIcon className="w-5 h-5" />
                     <span>Demandes & Pièces de Rechange ({besoins.length})</span>
@@ -126,7 +139,7 @@ const ValidationsEnAttente = () => {
                                     <span>Amortissement #{amort.id_amortissement} | Exercice {amort.exercice} | Méthode: {amort.methode}</span>
                                     <span className="font-bold text-primary-600">{formatPrice(amort.annuite_comptable)}</span>
                                 </div>
-                                <WorkflowAmortissementStepper 
+                                <WorkflowAmortissementStepper
                                     idAmortissement={amort.id_amortissement}
                                     onWorkflowUpdate={fetchAllData}
                                 />

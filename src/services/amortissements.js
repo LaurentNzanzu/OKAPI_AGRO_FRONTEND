@@ -174,6 +174,26 @@ export const amortissementsService = {
     previsualiserClotureDetaillee: async (payload) => {
         const response = await api.post(`${API_URL}/cloture/previsualisation-detaille`, payload);
         return response.data;
+    },
+
+    verifierTresorerie: async (id, data) => {
+        const response = await api.post(`${API_URL}/${id}/verifier-tresorerie`, data);
+        return response.data;
+    },
+
+    validerDecaissement: async (id, data) => {
+        const response = await api.post(`${API_URL}/${id}/valider-decaissement`, data);
+        return response.data;
+    },
+
+    validerEcriture: async (id, data) => {
+        const response = await api.post(`${API_URL}/${id}/valider-ecriture`, data);
+        return response.data;
+    },
+
+    getWorkflowStatus: async (id) => {
+        const response = await api.get(`${API_URL}/${id}/workflow-status`);
+        return response.data;
     }
 };
 

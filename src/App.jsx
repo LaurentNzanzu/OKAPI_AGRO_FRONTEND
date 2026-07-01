@@ -91,6 +91,7 @@ import {
   PrevisionsFinancieres,
   GestionCaisse,
   GestionEtats,
+  CaissePage,
 } from './routes/lazyPages';
 
 const Lazy = ({ children }) => (
@@ -177,6 +178,7 @@ function App() {
                   <Route path="amortissements/tableau/:id" element={<Lazy><TableauAmortissement /></Lazy>} />
                   <Route path="amortissements/ecritures" element={<Lazy><EcrituresComptables /></Lazy>} />
                   <Route path="amortissements/regles" element={<Lazy><GestionReglesAmortissement /></Lazy>} />
+                  <Route path="caisse" element={<Lazy><CaissePage /></Lazy>} />
 
                   {/* Routes de cession */}
                   <Route path="cessions/nouveau" element={<Lazy><CessionBien /></Lazy>} />
