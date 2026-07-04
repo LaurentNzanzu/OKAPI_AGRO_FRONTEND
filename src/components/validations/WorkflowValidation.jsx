@@ -382,7 +382,11 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
             <>
               <AppIcon icon={ClockIcon} size="lg" className="text-warning" />
               <div>
-                <p className="font-medium text-warning">{t('validationsWorkflow.waitingValidation')}</p>
+                <p className="font-medium text-warning">
+                  {t('validationsWorkflow.waitingValidation', { 
+                    step: STEPS[currentStepIndex]?.label || '' 
+                  })}
+                </p>
                 <p className="text-sm text-gray-600 dark:text-slate-400">
                   {t('validationsWorkflow.waitingValidationDesc', { 
                     step: STEPS[currentStepIndex]?.label || '' 
