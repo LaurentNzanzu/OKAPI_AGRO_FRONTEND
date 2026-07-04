@@ -215,14 +215,33 @@ const EcrituresComptables = ({ bienId }) => {
         }
     };
 
+    const getStaticUrl = (path) => {
+        if (!path) return '';
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+        const domain = apiBase.replace('/api/v1', '');
+        return `${domain}${path}`;
+    };
+
     const getStatutBadge = (statut, validee) => {
-        if (validee) {
-            return <StatusBadge label={t('amortissementsEcritures.statutValidated')} Icon={CheckCircleIcon} color="bg-green-100 text-green-700" />;
+        if (validee || statut === 'VALIDEE') {
+            return <StatusBadge label={t('amortissementsEcritures.statutValidated')} Icon={CheckCircleIcon} color="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" />;
         }
         if (statut === 'MODIFIEE') {
-            return <StatusBadge label={t('amortissementsEcritures.statutModified')} Icon={PencilSquareIcon} color="bg-orange-100 text-orange-700" />;
+            return <StatusBadge label={t('amortissementsEcritures.statutModified')} Icon={PencilSquareIcon} color="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" />;
         }
-        return <StatusBadge label={t('amortissementsEcritures.statutDraft')} Icon={ClockIcon} color="bg-yellow-100 text-yellow-700" />;
+        if (statut === 'EN_ATTENTE_FONDS') {
+            return <StatusBadge label={t('amortissementsEcritures.statutWaitingFunds')} Icon={ClockIcon} color="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" />;
+        }
+        if (statut === 'CAISSE_VALIDE') {
+            return <StatusBadge label={t('amortissementsEcritures.statutCaisseValide')} Icon={CheckCircleIcon} color="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" />;
+        }
+        if (statut === 'DG_VALIDE') {
+            return <StatusBadge label={t('amortissementsEcritures.statutDgValide')} Icon={CheckCircleIcon} color="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" />;
+        }
+        if (statut === 'REJETEE') {
+            return <StatusBadge label={t('amortissementsEcritures.statutRejected')} Icon={XMarkIcon} color="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" />;
+        }
+        return <StatusBadge label={t('amortissementsEcritures.statutDraft')} Icon={ClockIcon} color="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300" />;
     };
 
     const getFilteredEcritures = () => {
@@ -380,14 +399,14 @@ const EcrituresComptables = ({ bienId }) => {
                                                 >
                                                     {t('amortissementsEcritures.details')}
                                                 </button>
-                                                {!e.validee && (
-                                                    <button
-                                                        onClick={() => handleValider(e.id_ecriture)}
-                                                        className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
-                                                    >
-                                                        {t('amortissementsEcritures.validate')}
-                                                    </button>
-                                                )}
+                                                {!e.validee && (e.statut === 'DG_VALIDE' || e.statut_workflow === 'DG_VALIDE') && (
+                                                     <button
+                                                         onClick={() => handleValider(e.id_ecriture)}
+                                                         className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                                                     >
+                                                         {t('amortissementsEcritures.validate')}
+                                                     </button>
+                                                 )}
                                             </div>
                                         </td>
                                     </tr>
@@ -462,8 +481,40 @@ const EcrituresComptables = ({ bienId }) => {
                                     />
                                 </div>
 
+                                {selectedEcriture.statut_workflow && (
+                                    <div className="border-t pt-4">
+                                        <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                                            {t('amortissementsEcritures.workflowStatus')} :
+                                        </p>
+                                        <div className="text-sm font-semibold text-gray-800 dark:text-slate-200">
+                                            {selectedEcriture.statut_workflow === 'BROUILLON' && t('amortissementsEcritures.workflowEtapeComptable')}
+                                            {selectedEcriture.statut_workflow === 'EN_ATTENTE_FONDS' && t('amortissementsEcritures.workflowEtapeCaisse')}
+                                            {selectedEcriture.statut_workflow === 'CAISSE_VALIDE' && t('amortissementsEcritures.workflowEtapeDG')}
+                                            {selectedEcriture.statut_workflow === 'DG_VALIDE' && t('amortissementsEcritures.workflowEtapeComptableValidation')}
+                                            {selectedEcriture.statut_workflow === 'VALIDEE' && "Terminé"}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedEcriture.piece_justificative_url && (
+                                    <div className="border-t pt-4">
+                                        <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                                            {t('amortissementsEcritures.pieceJustificative')} :
+                                        </p>
+                                        <a
+                                            href={getStaticUrl(selectedEcriture.piece_justificative_url)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                                        >
+                                            <AppIcon icon={DocumentTextIcon} size="sm" />
+                                            {t('amortissementsEcritures.bonDecaissement')}
+                                        </a>
+                                    </div>
+                                )}
+
                                 <div className="flex gap-3 pt-4">
-                                    {!selectedEcriture.validee && (
+                                    {!selectedEcriture.validee && (selectedEcriture.statut === 'DG_VALIDE' || selectedEcriture.statut_workflow === 'DG_VALIDE') && (
                                         <button
                                             onClick={() => handleValider(selectedEcriture.id_ecriture)}
                                             className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors shadow-sm"
