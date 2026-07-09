@@ -23,7 +23,6 @@ const FicheValidation = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     
-    // ✅ Conversion de l'ID en nombre
     const besoinId = parseInt(id, 10);
     
     const [workflow, setWorkflow] = useState(null);
@@ -81,29 +80,66 @@ const FicheValidation = () => {
         }
     };
 
-    // ✅ LOGIQUE DE PERMISSION : Vérifie si l'utilisateur actuel est celui qui doit valider
-    const isCurrentValidator = () => {
-        if (!workflow || !user || !user.roles) return false;
-        
-        // Rôle de l'utilisateur connecté
-        const currentRole = user.roles.find(r => ['DG', 'COMPTABLE', 'CAISSE', 'ADMIN'].includes(r));
-        const status = workflow.statut_actuel;
-
-        if (currentRole === 'ADMIN') return true;
-        if (status === 'BROUILLON' || status === 'EN_VALIDATION') return currentRole === 'DG';
-        if (status === 'DG_VALIDE') return currentRole === 'COMPTABLE';
-        if (status === 'COMPTABLE_VALIDE') return currentRole === 'CAISSE';
-        return false;
-    };
-
     // ✅ Message indiquant qui doit valider ensuite
     const getNextValidatorLabel = () => {
         if (!workflow) return '';
         const status = workflow.statut_actuel;
-        if (status === 'BROUILLON' || status === 'EN_VALIDATION') return 'le Directeur Général (DG)';
-        if (status === 'DG_VALIDE') return 'le Comptable';
-        if (status === 'COMPTABLE_VALIDE') return 'la Caisse';
-        return '';
+        
+        // Ordre du workflow: COMPTABLE → CAISSE → DG
+        if (status === 'BROUILLON' || status === 'EN_VALIDATION') {
+            return 'le Comptable';
+        }
+        if (status === 'COMPTABLE_VALIDE') {
+            return 'la Caisse';
+        }
+        if (status === 'CAISSE_VALIDE') {
+            return 'le Directeur Général (DG)';
+        }
+        if (status === 'APPROUVEE') {
+            return '✅ Validation terminée';
+        }
+        if (status === 'REJETE') {
+            return '❌ Demande rejetée';
+        }
+        
+        // Fallback: essayer de déterminer à partir des validations
+        const validations = workflow.validations_realisees || [];
+        const ordresValides = validations.map(v => v.ordre);
+        
+        if (!ordresValides.includes('COMPTABLE')) {
+            return 'le Comptable';
+        }
+        if (!ordresValides.includes('CAISSE')) {
+            return 'la Caisse';
+        }
+        if (!ordresValides.includes('DG')) {
+            return 'le Directeur Général (DG)';
+        }
+        
+        return 'le prochain validateur';
+    };
+
+    // ✅ Vérifier si l'utilisateur actuel est celui qui doit valider
+    const isCurrentValidator = () => {
+        if (!workflow || !user || !user.roles) return false;
+        
+        const currentRole = user.roles.find(r => ['DG', 'COMPTABLE', 'CAISSE', 'ADMIN'].includes(r));
+        const status = workflow.statut_actuel;
+
+        if (currentRole === 'ADMIN') return true;
+        
+        // Ordre du workflow: COMPTABLE → CAISSE → DG
+        if (status === 'BROUILLON' || status === 'EN_VALIDATION') {
+            return currentRole === 'COMPTABLE';
+        }
+        if (status === 'COMPTABLE_VALIDE') {
+            return currentRole === 'CAISSE';
+        }
+        if (status === 'CAISSE_VALIDE') {
+            return currentRole === 'DG';
+        }
+        
+        return false;
     };
 
     // ✅ Fonction pour rafraîchir les données
@@ -164,11 +200,10 @@ const FicheValidation = () => {
                     </div>
                 </div>
 
-                {/* ✅ Passer BESOIN_ID au composant WorkflowValidation */}
                 <WorkflowValidation 
                     workflow={workflow} 
-                    besoinId={besoinId}  // ✅ AJOUTER CETTE LIGNE
-                    onRefresh={handleRefresh}  // ✅ AJOUTER CETTE LIGNE
+                    besoinId={besoinId}
+                    onRefresh={handleRefresh}
                 />
             </div>
 
@@ -191,7 +226,9 @@ const FicheValidation = () => {
                                 <AppIcon icon={ClockIcon} size="sm" />
                                 Vous n'êtes pas l'attendu(e) pour cette étape.
                             </p>
-                            <p className="text-sm mt-1">La prochaine validation doit être effectuée par <strong>{getNextValidatorLabel()}</strong>.</p>
+                            <p className="text-sm mt-1">
+                                La prochaine validation doit être effectuée par <strong>{getNextValidatorLabel()}</strong>.
+                            </p>
                         </div>
                     )}
                 </div>

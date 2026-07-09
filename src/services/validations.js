@@ -20,7 +20,13 @@ export const validationsService = {
      * @param {Object} data - Données d'approbation
      */
     approuver: async (besoinId, data = {}) => {
-        const response = await api.post(`${BASE_URL}/besoin/${besoinId}/approuver`, data);
+        // ✅ CORRECTION : Construire le payload avec 'decision'
+        const payload = {
+            decision: 'APPROUVE',
+            commentaire: data.commentaire || '',
+            piece_justificative_url: data.piece_justificative_url || null
+        };
+        const response = await api.post(`${BASE_URL}/besoin/${besoinId}/approuver`, payload);
         return response.data;
     },
     
@@ -30,7 +36,14 @@ export const validationsService = {
      * @param {Object} data - Données de rejet
      */
     rejeter: async (besoinId, data = {}) => {
-        const response = await api.post(`${BASE_URL}/besoin/${besoinId}/rejeter`, data);
+        // ✅ CORRECTION : Construire le payload avec 'decision'
+        const payload = {
+            decision: 'REJETE',
+            motif_rejet: data.motif_rejet || 'Rejeté sans motif',
+            commentaire: data.commentaire || '',
+            piece_justificative_url: data.piece_justificative_url || null
+        };
+        const response = await api.post(`${BASE_URL}/besoin/${besoinId}/rejeter`, payload);
         return response.data;
     },
 
@@ -50,10 +63,13 @@ export const validationsService = {
      * Approuve une validation par son ID de validation (compatibilité)
      */
     approuverValidation: async (validationId, data = {}) => {
-        const response = await api.post(`${BASE_URL}/${validationId}/approuver`, {
+        // ✅ CORRECTION : Ajouter 'decision'
+        const payload = {
+            decision: 'APPROUVE',
             commentaire: data.commentaire || null,
             piece_justificative_url: data.piece_justificative_url || null
-        });
+        };
+        const response = await api.post(`${BASE_URL}/${validationId}/approuver`, payload);
         return response.data;
     },
 
@@ -61,11 +77,14 @@ export const validationsService = {
      * Rejette une validation par son ID de validation (compatibilité)
      */
     rejeterValidation: async (validationId, data = {}) => {
-        const response = await api.post(`${BASE_URL}/${validationId}/rejeter`, {
+        // ✅ CORRECTION : Ajouter 'decision'
+        const payload = {
+            decision: 'REJETE',
             motif_rejet: data.motif_rejet || 'Rejeté sans motif',
             commentaire: data.commentaire || null,
             piece_justificative_url: data.piece_justificative_url || null
-        });
+        };
+        const response = await api.post(`${BASE_URL}/${validationId}/rejeter`, payload);
         return response.data;
     },
     

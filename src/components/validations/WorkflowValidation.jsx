@@ -40,23 +40,23 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
 
   // ✅ Ordre correct : COMPTABLE → CAISSE → DG
   const STEPS = [
-    { 
-      ordre: 'COMPTABLE', 
-      label: t('validationsWorkflow.comptable'), 
+    {
+      ordre: 'COMPTABLE',
+      label: t('validationsWorkflow.comptable'),
       icon: DocumentTextIcon,
       description: t('validationsWorkflow.comptableDesc'),
       verificationKey: 'verification_budget'
     },
-    { 
-      ordre: 'CAISSE', 
-      label: t('validationsWorkflow.caisse'), 
+    {
+      ordre: 'CAISSE',
+      label: t('validationsWorkflow.caisse'),
       icon: CalendarDaysIcon,
       description: t('validationsWorkflow.caisseDesc'),
       verificationKey: 'verification_tresorerie'
     },
-    { 
-      ordre: 'DG', 
-      label: t('validationsWorkflow.dg'), 
+    {
+      ordre: 'DG',
+      label: t('validationsWorkflow.dg'),
       icon: UserIcon,
       description: t('validationsWorkflow.dgDesc'),
       verificationKey: null
@@ -147,10 +147,10 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
   // ✅ Fonction robuste pour extraire le message d'erreur
   const getErrorMessage = (err) => {
     if (!err) return null;
-    
+
     // Si c'est une chaîne, la retourner directement
     if (typeof err === 'string') return err;
-    
+
     // Si c'est une erreur axios avec response
     if (err.response?.data?.detail) {
       const detail = err.response.data.detail;
@@ -160,13 +160,15 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
       }
       return detail;
     }
-    
+
     // Si c'est une erreur avec un message
     if (err.message) return err.message;
-    
+
     // Fallback
     return 'Une erreur est survenue';
   };
+
+  // frontend/src/components/validations/WorkflowValidation.jsx
 
   const handleApprove = async () => {
     if (!besoinId) {
@@ -177,9 +179,12 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
     setLoading(true);
     setError(null);
     setValidationStatus(null);
-    
+
     try {
-      await validationsService.approuver(besoinId, { commentaire: '' });
+      await validationsService.approuver(besoinId, {
+        commentaire: '',
+        decision: 'APPROUVE'  // ← AJOUTER
+      });
       setValidationStatus('success');
       if (onRefresh) {
         setTimeout(() => onRefresh(), 500);
@@ -191,7 +196,6 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
       setLoading(false);
     }
   };
-
   const handleReject = async () => {
     if (!besoinId) {
       setError("L'identifiant du besoin est manquant");
@@ -206,10 +210,10 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
     setLoading(true);
     setError(null);
     setValidationStatus(null);
-    
+
     try {
-      await validationsService.rejeter(besoinId, { 
-        motif_rejet: rejectMotif 
+      await validationsService.rejeter(besoinId, {
+        motif_rejet: rejectMotif
       });
       setValidationStatus('success');
       if (onRefresh) {
@@ -228,21 +232,20 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
   // ✅ Fonction de rendu pour une étape de vérification
   const renderVerificationStep = (verification, label, stepNumber) => {
     if (!verification) return null;
-    
+
     const isAvailable = verification.est_disponible !== undefined ? verification.est_disponible : verification.est_suffisante;
     const message = verification.message || (isAvailable ? 'Vérification réussie' : 'Vérification échouée');
     const isCurrent = currentVerification === verification;
 
     return (
-      <div className={`p-3 rounded-lg border flex items-start gap-3 ${
-        isAvailable 
-          ? 'bg-success/5 border-success/20' 
+      <div className={`p-3 rounded-lg border flex items-start gap-3 ${isAvailable
+          ? 'bg-success/5 border-success/20'
           : 'bg-danger/5 border-danger/20'
-      } ${isCurrent ? 'ring-2 ring-primary-500/30' : ''}`}>
-        <AppIcon 
-          icon={isAvailable ? CheckCircleIcon : XCircleIcon} 
-          size="md" 
-          className={isAvailable ? 'text-success' : 'text-danger'} 
+        } ${isCurrent ? 'ring-2 ring-primary-500/30' : ''}`}>
+        <AppIcon
+          icon={isAvailable ? CheckCircleIcon : XCircleIcon}
+          size="md"
+          className={isAvailable ? 'text-success' : 'text-danger'}
         />
         <div className="flex-1">
           <div className="flex items-center justify-between">
@@ -290,7 +293,7 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
             return (
               <div key={step.ordre} className="flex flex-col items-center flex-1">
                 <div className="relative">
-                  <div 
+                  <div
                     className={`
                       w-10 h-10 rounded-full flex items-center justify-center transition-all
                       ${isPast ? 'bg-success text-white' : ''}
@@ -299,14 +302,14 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
                       ${status.status === 'rejected' ? 'bg-danger text-white' : ''}
                     `}
                   >
-                    <AppIcon 
-                      icon={status.icon} 
-                      size="sm" 
+                    <AppIcon
+                      icon={status.icon}
+                      size="sm"
                       className={isFuture ? 'text-gray-400 dark:text-slate-500' : ''}
                     />
                   </div>
                   {index < STEPS.length - 1 && (
-                    <div 
+                    <div
                       className={`
                         absolute top-5 left-[calc(100%+4px)] w-[calc(100%-8px)] h-0.5
                         ${isPast ? 'bg-success' : 'bg-gray-200 dark:bg-night-muted'}
@@ -334,16 +337,16 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
       {/* ✅ Bloc des vérifications préalables intégré */}
       {workflow.verification_budget && (
         renderVerificationStep(
-          workflow.verification_budget, 
-          'Solde Budgétaire', 
+          workflow.verification_budget,
+          'Solde Budgétaire',
           1
         )
       )}
-      
+
       {workflow.verification_tresorerie && (
         renderVerificationStep(
-          workflow.verification_tresorerie, 
-          'Trésorerie Caisse', 
+          workflow.verification_tresorerie,
+          'Trésorerie Caisse',
           2
         )
       )}
@@ -383,13 +386,13 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
               <AppIcon icon={ClockIcon} size="lg" className="text-warning" />
               <div>
                 <p className="font-medium text-warning">
-                  {t('validationsWorkflow.waitingValidation', { 
-                    step: STEPS[currentStepIndex]?.label || '' 
+                  {t('validationsWorkflow.waitingValidation', {
+                    step: STEPS[currentStepIndex]?.label || ''
                   })}
                 </p>
                 <p className="text-sm text-gray-600 dark:text-slate-400">
-                  {t('validationsWorkflow.waitingValidationDesc', { 
-                    step: STEPS[currentStepIndex]?.label || '' 
+                  {t('validationsWorkflow.waitingValidationDesc', {
+                    step: STEPS[currentStepIndex]?.label || ''
                   })}
                 </p>
               </div>
@@ -412,8 +415,8 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
             {workflow.validations_realisees.map((validation, idx) => {
               const isApproved = validation.decision === 'APPROUVE';
               return (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className={`
                     p-3 rounded-lg border
                     ${isApproved ? 'border-success/20 bg-success/5' : 'border-danger/20 bg-danger/5'}
@@ -476,7 +479,7 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
           <p className="text-sm text-gray-600 dark:text-slate-400">
             {t('validationsWorkflow.actionPrompt')}
           </p>
-          
+
           {/* ✅ Affichage de l'erreur robuste */}
           {error && (
             <div className="p-3 bg-danger/10 border border-danger/20 rounded-lg text-danger text-sm">
@@ -542,7 +545,7 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
               </div>
             )}
           </div>
-          
+
           {/* ✅ Indicateur de progression si chargement */}
           {loading && (
             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
