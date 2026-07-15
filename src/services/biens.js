@@ -6,16 +6,24 @@ const BIENS_ENDPOINT = '/biens';
 export const biensService = {
   /**
    * Récupère la liste des biens avec pagination et filtres
+   * Limite maximale de sécurité fixée à 500 pour correspondre aux contraintes du backend.
    */
   getAll: async (params = {}) => {
-    const { page = 1, limit = 10, skip, type_bien, etat, search } = params;
-    const skipVal = skip !== undefined ? skip : (page - 1) * limit;
+    const { page = 1, limit = 10, skip, type_bien, etat, search, disponible_maintenance } = params;
+    
+    // 🛡️ Sécurité : On s'assure que la limite demandée ne dépasse jamais la contrainte API de 500
+    const safeLimit = Math.min(Number(limit), 500);
+    
+    // Calcul du décalage (skip) basé sur la limite sécurisée
+    const skipVal = skip !== undefined ? skip : (page - 1) * safeLimit;
+    
     const queryParams = new URLSearchParams({
       skip: String(skipVal),
-      limit: String(limit),
+      limit: String(safeLimit),
       ...(type_bien && { type_bien }),
       ...(etat && { etat }),
       ...(search && { search }),
+      ...(disponible_maintenance !== undefined && { disponible_maintenance: String(disponible_maintenance) }),
     });
 
     const response = await api.get(`${BIENS_ENDPOINT}?${queryParams}`);
