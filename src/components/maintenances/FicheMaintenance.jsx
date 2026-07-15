@@ -8,7 +8,7 @@ import { pannesService } from '../../services/pannes';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate, formatPrice } from '../../utils/formatters';
 import { StatutPanne, getStatutPanneColor, BADGE_COLORS } from '../../utils/workflowEnums';
-import { getStatutPanneLabelI18n } from '../../utils/i18nWorkflow';
+import { getStatutPanneLabelI18n, getEtatBienLabelI18n } from '../../utils/i18nWorkflow';
 import {
     AppIcon,
     getMaintenanceTypeConfig,
@@ -21,6 +21,7 @@ import {
     XCircleIcon,
     DocumentTextIcon,
     PencilSquareIcon,
+    QrCodeIcon,
 } from '../ui/icons';
 
 const FicheMaintenance = () => {
@@ -39,6 +40,7 @@ const FicheMaintenance = () => {
     const [showTerminerForm, setShowTerminerForm] = useState(false);
     const [terminerData, setTerminerData] = useState({ rapport: '', cout: '', pieces_remplacees: '' });
     const [submitting, setSubmitting] = useState(false);
+    const [biensDeLaCategorie, setBiensDeLaCategorie] = useState([]);
 
     const fetchData = async () => {
         try {
@@ -68,6 +70,22 @@ const FicheMaintenance = () => {
     useEffect(() => {
         fetchData();
     }, [id]);
+
+    useEffect(() => {
+        const loadSimilarBiens = async () => {
+            if (!bien || !bien.type_bien) return;
+            try {
+                const data = await biensService.getAll({ limit: 1000 });
+                const similar = (data.biens || []).filter(
+                    (b) => b.type_bien === bien.type_bien && b.id_bien !== bien.id_bien
+                );
+                setBiensDeLaCategorie(similar);
+            } catch (err) {
+                console.error('Erreur chargement biens similaires:', err);
+            }
+        };
+        loadSimilarBiens();
+    }, [bien]);
 
     const handleDemarrer = async () => {
         try {
@@ -133,9 +151,11 @@ const FicheMaintenance = () => {
                 <div>
                     <h1 className="text-2xl font-bold inline-flex items-center gap-2">
                         <AppIcon icon={WrenchScrewdriverIcon} size="md" />
-                        {t('maintenances.fiche.title', { id: maintenance.id_maintenance })}
+                        {maintenance.description}
                     </h1>
-                    <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{maintenance.description}</p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+                        {t('maintenances.fiche.title', { id: maintenance.id_maintenance })}
+                    </p>
                 </div>
                 <button
                     onClick={() => navigate('/maintenances/planning')}
@@ -201,8 +221,20 @@ const FicheMaintenance = () => {
                                     <StatusBadge label={statutInfo.label} Icon={statutInfo.Icon} color={statutInfo.color} />
                                 </p>
                             </div>
-                            <div><label className="text-xs text-gray-500 dark:text-slate-400">{t('maintenances.fiche.bienConcerne')}</label><p className="font-medium">{bien?.marque || bien?.fabricant} {bien?.modele || ''}</p></div>
-                            <div><label className="text-xs text-gray-500 dark:text-slate-400">{t('maintenances.fiche.technicien')}</label><p className="font-medium">{maintenance.technicien_nom || `ID: ${maintenance.id_technicien}`}</p></div>
+                            <div>
+                                <label className="text-xs text-gray-500 dark:text-slate-400">{t('maintenances.fiche.bienConcerne')}</label>
+                                <p className="font-medium">
+                                    {bien ? (
+                                        `${bien.marque || bien.fabricant || bien.description || ''} ${bien.modele || ''}`.trim() || maintenance.bien_designation
+                                    ) : (
+                                        maintenance.bien_designation || `Bien #${maintenance.id_bien}`
+                                    )}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="text-xs text-gray-500 dark:text-slate-400">{t('maintenances.fiche.technicien')}</label>
+                                <p className="font-medium">{maintenance.technicien_nom || `ID: ${maintenance.id_technicien}`}</p>
+                            </div>
                             <div><label className="text-xs text-gray-500 dark:text-slate-400">{t('maintenances.fiche.datePlanifiee')}</label><p className="font-medium">{formatDate(maintenance.date_planifiee)}</p></div>
                             {maintenance.date_debut_reelle && <div><label className="text-xs text-gray-500 dark:text-slate-400">{t('maintenances.fiche.debutReel')}</label><p className="font-medium">{formatDate(maintenance.date_debut_reelle)}</p></div>}
                             {maintenance.date_fin_reelle && <div><label className="text-xs text-gray-500 dark:text-slate-400">{t('maintenances.fiche.finReelle')}</label><p className="font-medium">{formatDate(maintenance.date_fin_reelle)}</p></div>}
@@ -231,6 +263,64 @@ const FicheMaintenance = () => {
                             {maintenance.pieces_remplacees && (
                                 <div className="mt-3 pt-3 border-t"><strong>{t('maintenances.fiche.piecesRemplacees')}</strong><p className="text-sm text-gray-600 dark:text-slate-300 mt-1">{maintenance.pieces_remplacees}</p></div>
                             )}
+                        </div>
+                    )}
+
+                    {isTechnicien && biensDeLaCategorie.length > 0 && (
+                        <div className="bg-white dark:bg-slate-900 rounded-lg border p-6 mt-6">
+                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <AppIcon icon={QrCodeIcon} size="md" />
+                                {t('maintenances.fiche.similarAssets', 'Autres actifs de la même catégorie')}
+                            </h2>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b dark:border-slate-800 text-sm font-semibold text-gray-500">
+                                            <th className="py-3 px-4">{t('assets.qrCode', 'QR Code')}</th>
+                                            <th className="py-3 px-4">{t('assets.designation', 'Marque / Modèle')}</th>
+                                            <th className="py-3 px-4">{t('common.status', 'Statut')}</th>
+                                            <th className="py-3 px-4 text-right">{t('common.actions', 'Actions')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {biensDeLaCategorie.map((b) => {
+                                            const etatKey = String(b.etat || '').toUpperCase();
+                                            const badgeColor = {
+                                                NEUF: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+                                                BON: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-200',
+                                                USAGE: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+                                                PANNE: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+                                                REFORME: 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-300',
+                                                MAINTENANCE: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+                                            }[etatKey] || 'bg-gray-100 text-gray-700';
+
+                                            return (
+                                                <tr key={b.id_bien} className="border-b dark:border-slate-800 text-sm hover:bg-gray-50 dark:hover:bg-slate-800/40">
+                                                    <td className="py-3 px-4 font-mono text-xs text-gray-600 dark:text-slate-400">
+                                                        {b.qr_code || '—'}
+                                                    </td>
+                                                    <td className="py-3 px-4 font-medium">
+                                                        {b.marque || b.fabricant || '—'} {b.modele || ''}
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${badgeColor}`}>
+                                                            {getEtatBienLabelI18n(t, b.etat)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-4 text-right">
+                                                        <button
+                                                            onClick={() => navigate(`/biens/${b.id_bien}`)}
+                                                            className="text-primary-600 hover:text-primary-700 text-xs font-medium"
+                                                        >
+                                                            {t('common.view', 'Voir')}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
                 </div>

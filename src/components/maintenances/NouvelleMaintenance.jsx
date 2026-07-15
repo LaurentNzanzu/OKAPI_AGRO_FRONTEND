@@ -33,10 +33,17 @@ const NouvelleMaintenance = () => {
 
     const loadBiens = async () => {
         try {
-            const data = await biensService.getAll({ limit: 100 });
-            setBiens(data.biens || []);
+            setLoading(true);
+            const data = await biensService.getAll({ disponible_maintenance: true, limit: 100 });
+            // Filtrer uniquement les biens qui ne sont pas immobilisés ou réformés (gestion majuscules/minuscules)
+            const disponibles = (data.biens || []).filter(bien => {
+                const etatUpper = String(bien.etat || '').toUpperCase();
+                return etatUpper !== 'MAINTENANCE' && etatUpper !== 'REFORME';
+            });
+            setBiens(disponibles);
         } catch (err) {
             console.error('Erreur chargement biens:', err);
+            setError(t('maintenances.nouvelle.errorLoadingBiens'));
         } finally {
             setLoading(false);
         }
