@@ -313,10 +313,10 @@ const DeclarationPanne = () => {
       
       if (response.data?.found && response.data?.bien) {
         const bienData = response.data.bien;
-        const fullBien = await biensService.getById(bienData.id_bien);
-        setBien(fullBien);
-        setFormData(prev => ({ ...prev, id_bien: fullBien.id_bien }));
-        setSearchTerm(getBienLabel(fullBien));
+        // Charger l'équipement directement sans requête croisée/supplémentaire
+        setBien(bienData);
+        setFormData(prev => ({ ...prev, id_bien: bienData.id_bien }));
+        setSearchTerm(getBienLabel(bienData));
         setSearchResults([]);
         setShowSuggestions(false);
         setError(null);
