@@ -61,11 +61,11 @@ const AlertesAchatCard = ({ alertes, onRefresh }) => {
                             key={alerte.piece_id}
                             className={`p-4 rounded-lg border ${getActionClass(alerte.action)}`}
                         >
-                            <div className="flex justify-between items-start">
-                                <div className="flex-1">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div className="flex-1 w-full">
                                     <div className="flex items-center gap-2 mb-1">
                                         <AppIcon icon={ActionIcon} size="md" />
-                                        <h4 className="font-bold text-gray-800 dark:text-slate-100">
+                                        <h4 className="font-bold text-gray-800 dark:text-slate-100 capitalize">
                                             {alerte.designation}
                                         </h4>
                                         <span className="text-xs text-gray-400 dark:text-slate-500 font-mono">
@@ -73,7 +73,7 @@ const AlertesAchatCard = ({ alertes, onRefresh }) => {
                                         </span>
                                     </div>
                                     
-                                    <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 text-sm">
                                         <div>
                                             <span className="text-gray-500 dark:text-slate-400">{t('iaAlertesAchat.currentStock')}</span>
                                             <span className={`ml-2 font-medium ${
@@ -81,19 +81,19 @@ const AlertesAchatCard = ({ alertes, onRefresh }) => {
                                                     ? 'text-red-600' 
                                                     : 'text-gray-800'
                                             }`}>
-                                                {alerte.stock_actuel}
+                                                {alerte.stock_actuel} pièce{Math.abs(alerte.stock_actuel) > 1 ? 's' : ''}
                                             </span>
                                         </div>
                                         <div>
                                             <span className="text-gray-500 dark:text-slate-400">{t('iaAlertesAchat.minStock')}</span>
                                             <span className="ml-2 font-medium text-gray-800 dark:text-slate-100">
-                                                {alerte.stock_minimum}
+                                                {alerte.stock_minimum} pièce{Math.abs(alerte.stock_minimum) > 1 ? 's' : ''}
                                             </span>
                                         </div>
                                         <div>
                                             <span className="text-gray-500 dark:text-slate-400">{t('iaAlertesAchat.monthlyConsumption')}</span>
                                             <span className="ml-2 font-medium text-gray-800 dark:text-slate-100">
-                                                {alerte.consommation_mensuelle_moyenne}
+                                                {alerte.consommation_mensuelle_moyenne} pièce{Math.abs(alerte.consommation_mensuelle_moyenne) > 1 ? 's' : ''}/mois
                                             </span>
                                         </div>
                                         <div>
@@ -103,13 +103,13 @@ const AlertesAchatCard = ({ alertes, onRefresh }) => {
                                                     ? 'text-red-600' 
                                                     : 'text-gray-800'
                                             }`}>
-                                                {alerte.stock_estime_60j}
+                                                {alerte.stock_estime_60j} pièce{Math.abs(alerte.stock_estime_60j) > 1 ? 's' : ''}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                <div className="text-left md:text-right w-full md:w-auto shrink-0">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-medium inline-block ${
                                         alerte.action === 'ACHAT_URGENT' 
                                             ? 'bg-red-500 text-white' 
                                             : 'bg-yellow-500 text-white'
@@ -120,7 +120,7 @@ const AlertesAchatCard = ({ alertes, onRefresh }) => {
                                         <div className="mt-2">
                                             <p className="text-xs text-gray-500 dark:text-slate-400">{t('iaAlertesAchat.recommendedQty')}</p>
                                             <p className="text-xl font-bold text-primary-600">
-                                                {alerte.quantite_recommandee}
+                                                {alerte.quantite_recommandee} pièce{Math.abs(alerte.quantite_recommandee) > 1 ? 's' : ''}
                                             </p>
                                         </div>
                                     )}
@@ -128,12 +128,12 @@ const AlertesAchatCard = ({ alertes, onRefresh }) => {
                             </div>
                             
                             {alerte.action === 'ACHAT_URGENT' && (
-                                <div className="mt-3 flex gap-2">
-                                    <button className="px-3 py-1 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 inline-flex items-center gap-1">
+                                <div className="mt-3 flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                                    <button className="px-3 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 inline-flex items-center justify-center gap-1 w-full sm:w-auto min-h-[44px]">
                                         <AppIcon icon={ShoppingCartIcon} size="xs" className="text-white" />
                                         {t('iaAlertesAchat.createNeed')}
                                     </button>
-                                    <button className="px-3 py-1 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 text-sm rounded-lg hover:bg-gray-200 inline-flex items-center gap-1">
+                                    <button className="px-3 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 text-sm rounded-lg hover:bg-gray-200 inline-flex items-center justify-center gap-1 w-full sm:w-auto min-h-[44px]">
                                         <AppIcon icon={ChartBarIcon} size="xs" />
                                         {t('iaAlertesAchat.viewHistory')}
                                     </button>

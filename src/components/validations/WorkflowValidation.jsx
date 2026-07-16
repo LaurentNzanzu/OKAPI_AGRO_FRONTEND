@@ -283,7 +283,7 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
 
       {/* Barre de progression */}
       <div className="relative">
-        <div className="flex justify-between">
+        <div className="flex flex-col md:flex-row justify-between gap-4 md:gap-0">
           {STEPS.map((step, index) => {
             const status = getStepStatus(step.ordre);
             const isActive = index === currentStepIndex;
@@ -291,11 +291,11 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
             const isFuture = index > currentStepIndex;
 
             return (
-              <div key={step.ordre} className="flex flex-col items-center flex-1">
-                <div className="relative">
+              <div key={step.ordre} className="flex flex-row md:flex-col items-center md:items-center gap-3 md:gap-0 flex-1 relative z-10 w-full md:w-auto">
+                <div className="relative flex justify-center items-center shrink-0">
                   <div
                     className={`
-                      w-10 h-10 rounded-full flex items-center justify-center transition-all
+                      w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0
                       ${isPast ? 'bg-success text-white' : ''}
                       ${isActive ? 'bg-primary-600 text-white ring-4 ring-primary-200 dark:ring-primary-900/50' : ''}
                       ${isFuture ? 'bg-gray-200 dark:bg-night-muted text-gray-400 dark:text-slate-500' : ''}
@@ -311,23 +311,25 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
                   {index < STEPS.length - 1 && (
                     <div
                       className={`
-                        absolute top-5 left-[calc(100%+4px)] w-[calc(100%-8px)] h-0.5
+                        absolute top-10 left-5 -ml-[1px] w-0.5 h-6 md:top-5 md:left-[calc(100%+4px)] md:w-[calc(100%-8px)] md:h-0.5
                         ${isPast ? 'bg-success' : 'bg-gray-200 dark:bg-night-muted'}
                       `}
                     />
                   )}
                 </div>
-                <span className="text-xs font-medium mt-2 text-center text-gray-700 dark:text-slate-300">
-                  {step.label}
-                </span>
-                <span className={`text-xs ${status.color}`}>
-                  {status.label}
-                </span>
-                {isActive && !isCompleted && !isRejected && (
-                  <span className="text-xs text-primary-600 dark:text-primary-400 font-medium mt-0.5">
-                    {t('validationsWorkflow.currentStep')}
+                <div className="flex flex-col md:items-center">
+                  <span className="text-xs font-medium md:mt-2 md:text-center text-gray-700 dark:text-slate-300">
+                    {step.label}
                   </span>
-                )}
+                  <span className={`text-xs ${status.color} md:text-center`}>
+                    {status.label}
+                  </span>
+                  {isActive && !isCompleted && !isRejected && (
+                    <span className="text-xs text-primary-600 dark:text-primary-400 font-medium md:mt-0.5 md:text-center">
+                      {t('validationsWorkflow.currentStep')}
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -487,12 +489,13 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
             </div>
           )}
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Button
               variant="success"
               onClick={handleApprove}
               isLoading={loading && !showRejectForm}
               disabled={loading || !canValidate()}
+              className="w-full sm:w-auto"
             >
               <AppIcon icon={CheckIcon} size="sm" className="mr-1" />
               {loading ? t('common.loading') : t('validationsWorkflow.approve')}
@@ -503,13 +506,14 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
                 variant="danger"
                 onClick={() => setShowRejectForm(true)}
                 disabled={loading}
+                className="w-full sm:w-auto"
               >
                 <AppIcon icon={XMarkIcon} size="sm" className="mr-1" />
                 {t('validationsWorkflow.reject')}
               </Button>
             ) : (
-              <div className="flex-1 flex flex-wrap gap-3 items-start">
-                <div className="flex-1 min-w-[200px]">
+              <div className="w-full flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
+                <div className="flex-1 min-w-0">
                   <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                     {t('validationsWorkflow.rejectMotif')} <span className="text-danger">*</span>
                   </label>
@@ -521,12 +525,13 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
                     placeholder={t('validationsWorkflow.rejectMotifPlaceholder')}
                   />
                 </div>
-                <div className="flex gap-2 mt-6">
+                <div className="flex flex-col-reverse sm:flex-row gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
                   <Button
                     variant="danger"
                     onClick={handleReject}
                     isLoading={loading}
                     disabled={loading || !rejectMotif.trim()}
+                    className="w-full sm:w-auto"
                   >
                     {t('validationsWorkflow.confirmReject')}
                   </Button>
@@ -538,6 +543,7 @@ const WorkflowValidation = ({ workflow, besoinId, onRefresh }) => {
                       setError(null);
                     }}
                     disabled={loading}
+                    className="w-full sm:w-auto"
                   >
                     {t('common.cancel')}
                   </Button>

@@ -115,6 +115,7 @@ const HistoriqueValidations = () => {
             variant="outlined"
             onClick={() => navigate('/validations')}
             startIcon={<Visibility />}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             Voir les validations en attente
           </Button>
@@ -141,7 +142,7 @@ const HistoriqueValidations = () => {
         </Paper>
 
         {/* Tableau */}
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper} sx={{ overflowX: 'auto', width: '100%' }}>
           <Table>
             <TableHead>
               <TableRow>

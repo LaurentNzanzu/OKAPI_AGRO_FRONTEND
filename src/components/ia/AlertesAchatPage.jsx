@@ -49,12 +49,12 @@ const AlertesAchatPage = () => {
     }
 
     return (
-        <div className="app-page max-w-5xl mx-auto w-full">
-            <div className="flex items-center gap-3 mb-6">
-                <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-gray-700 dark:text-slate-300">
-                    <AppIcon icon={ArrowLeftIcon} size="md" />
-                </button>
-                <div className="flex-1">
+        <div className="app-page max-w-5xl mx-auto w-full px-4 sm:px-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 w-full">
+                <div className="flex items-start gap-3 w-full sm:w-auto">
+                    <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-gray-700 dark:text-slate-300 mt-1 shrink-0">
+                        <AppIcon icon={ArrowLeftIcon} size="md" />
+                    </button>
                     <PageHeader
                         title={t('iaAlertesAchat.title')}
                         subtitle={t('iaAlertesAchat.subtitle')}
@@ -63,7 +63,7 @@ const AlertesAchatPage = () => {
                 </div>
                 <button
                     onClick={fetchAlertes}
-                    className="px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-200 inline-flex items-center gap-2"
+                    className="px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-200 inline-flex items-center justify-center gap-2 w-full sm:w-auto min-h-[44px] shrink-0"
                 >
                     <AppIcon icon={ArrowPathIcon} size="sm" />
                     {t('iaAlertesAchat.refresh')}
@@ -100,11 +100,11 @@ const AlertesAchatPage = () => {
                     <div className="mb-4 flex gap-2">
                         <span className="px-3 py-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded-full text-sm inline-flex items-center gap-1">
                             <AppIcon icon={XCircleIcon} size="xs" />
-                            Urgent: {alertes.filter(a => a.action === 'ACHAT_URGENT').length}
+                            Urgent : {alertes.filter(a => a.action === 'ACHAT_URGENT').length} pièce{alertes.filter(a => a.action === 'ACHAT_URGENT').length > 1 ? 's' : ''}
                         </span>
                         <span className="px-3 py-1 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 rounded-full text-sm inline-flex items-center gap-1">
                             <AppIcon icon={SignalIcon} size="xs" />
-                            À surveiller: {alertes.filter(a => a.action === 'SURVEILLER').length}
+                            À surveiller : {alertes.filter(a => a.action === 'SURVEILLER').length} pièce{alertes.filter(a => a.action === 'SURVEILLER').length > 1 ? 's' : ''}
                         </span>
                     </div>
                     <AlertesAchatCard alertes={alertes} onRefresh={fetchAlertes} />

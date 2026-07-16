@@ -140,7 +140,7 @@ const Dashboard = () => {
 
       <DashboardAlerts alertes={summary?.alertes} />
 
-      <div className="app-stats-grid-2">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${showPannesTest ? 'lg:grid-cols-3' : ''} gap-4 w-full`}>
         <StatCard
           label={t('totalAssets')}
           value={summary?.total_biens || 0}

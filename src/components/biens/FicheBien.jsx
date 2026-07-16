@@ -424,19 +424,21 @@ const FicheBien = () => {
                 </Dialog>
 
                 {/* En-tête */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                    <IconButton onClick={() => navigate('/biens')} size="small">
-                        <ArrowBack />
-                    </IconButton>
-                    <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="h4">
-                            {getTypeLabel(bien.type_bien)} • {bien.marque || bien.fabricant} {bien.modele}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            {t('assets.qrCodeLabel', { code: bien.qr_code })}
-                        </Typography>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'stretch', md: 'center' }, justifyItems: 'space-between', gap: 2, mb: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+                        <IconButton onClick={() => navigate('/biens')} size="small">
+                            <ArrowBack />
+                        </IconButton>
+                        <Box sx={{ minWidth: 0 }}>
+                            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                                {getTypeLabel(bien.type_bien)} • {bien.marque || bien.fabricant} {bien.modele}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                {t('assets.qrCodeLabel', { code: bien.qr_code })}
+                            </Typography>
+                        </Box>
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
                         {canCalculateAmortissement() && (
                             <Tooltip title={t('assets.calculateDepreciation')}>
                                 <IconButton

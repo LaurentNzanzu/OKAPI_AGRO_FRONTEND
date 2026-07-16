@@ -89,10 +89,10 @@ const ListeAmortissements = ({ bienId }) => {
     return (
         <div className="app-page">
             {canCloture && !bienId && (
-                <div className="flex justify-end mb-4">
+                <div className="flex justify-end mb-4 w-full sm:w-auto">
                     <button
                         type="button"
-                        className="btn-primary"
+                        className="btn-primary w-full sm:w-auto min-h-[44px] py-2.5 flex items-center justify-center"
                         onClick={() => setShowCloture(true)}
                         aria-label={t('amortissements.list.closeExerciceAria')}
                     >
@@ -133,14 +133,14 @@ const ListeAmortissements = ({ bienId }) => {
             )}
 
             <div className="app-card overflow-hidden">
-                <div className="app-card-header flex-wrap">
+                <div className="app-card-header flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">{t('amortissements.list.title')}</h3>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                         {anneesDisponibles.length > 0 && (
                             <select
                                 value={filterAnnee}
                                 onChange={(e) => setFilterAnnee(e.target.value)}
-                                className="form-input"
+                                className="form-input min-h-[44px]"
                             >
                                 <option value="">{t('amortissements.list.allYears')}</option>
                                 {anneesDisponibles.map((annee) => (
@@ -151,7 +151,7 @@ const ListeAmortissements = ({ bienId }) => {
                         <select
                             value={filterMethode}
                             onChange={(e) => setFilterMethode(e.target.value)}
-                            className="form-input"
+                            className="form-input min-h-[44px]"
                         >
                             <option value="">{t('amortissements.list.allMethods')}</option>
                             {Object.entries(getMethodeLabels(t)).map(([value, label]) => (

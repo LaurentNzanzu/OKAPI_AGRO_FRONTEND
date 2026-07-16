@@ -101,13 +101,15 @@ const Login = () => {
           </div>
 
           <div className="af-auth__field">
-            <label className="af-auth__label" htmlFor="mot_de_passe">
-              Mot de passe
-            </label>
-            <div className="af-auth__input-wrap af-auth__input-wrap--password">
+            <div className="flex justify-between items-center">
+              <label className="af-auth__label" htmlFor="mot_de_passe">
+                Mot de passe
+              </label>
               <Link to="/forgot-password" className="af-auth__link-forgot-inline">
                 Mot de passe oublié ?
               </Link>
+            </div>
+            <div className="af-auth__input-wrap af-auth__input-wrap--password">
               <LockIcon />
               <input
                 type="password"

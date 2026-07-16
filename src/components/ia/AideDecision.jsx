@@ -94,7 +94,7 @@ const AideDecision = () => {
     };
 
     return (
-        <div className="app-page max-w-5xl mx-auto w-full">
+        <div className="app-page max-w-5xl mx-auto w-full px-4 sm:px-6">
             <div className="flex items-center gap-3 mb-6">
                 <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-gray-700 dark:text-slate-300">
                     <AppIcon icon={ArrowLeftIcon} size="md" />
@@ -103,30 +103,30 @@ const AideDecision = () => {
             </div>
 
             {/* Formulaire de sélection du bien */}
-            <div className="bg-white dark:bg-slate-900 rounded-lg shadow p-6 mb-6">
-                <h2 className="text-lg font-semibold mb-4">1. Sélectionner un bien</h2>
+            <div className="bg-white dark:bg-slate-900 rounded-lg shadow p-4 sm:p-6 mb-6">
+                <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-slate-200">1. Sélectionner un bien</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                             Bien à analyser
                         </label>
-                        <div className="flex gap-3">
+                        <div className="flex flex-col sm:flex-row gap-3">
                             <input
                                 type="number"
                                 placeholder="ID du bien..."
                                 value={bienId}
                                 onChange={(e) => setBienId(e.target.value)}
-                                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-600"
+                                className="w-full sm:flex-1 px-4 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-600 dark:bg-slate-950 dark:text-slate-100"
                             />
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                                className="w-full sm:w-auto px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 shrink-0 min-h-[44px] flex items-center justify-center"
                             >
                                 {loading ? 'Analyse...' : 'Analyser'}
                             </button>
                         </div>
-                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">
                             Ou rechercher par désignation:
                         </p>
                         <input
@@ -137,7 +137,7 @@ const AideDecision = () => {
                                 setSearchTerm(e.target.value);
                                 searchBiens(e.target.value);
                             }}
-                            className="w-full mt-2 px-4 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-600"
+                            className="w-full mt-2 px-4 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-600 dark:bg-slate-950 dark:text-slate-100"
                         />
                         {searchResults.length > 0 && (
                             <div className="mt-2 border rounded-lg overflow-hidden max-h-60 overflow-y-auto">
