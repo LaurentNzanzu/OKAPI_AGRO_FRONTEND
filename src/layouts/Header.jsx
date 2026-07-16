@@ -255,7 +255,7 @@ const Header = ({ onMenuToggle, sidebarCollapsed, onSidebarCollapse, isLarge }) 
 
             {showNotifications && (
               <div
-                className="absolute right-0 mt-2 w-80 md:w-96 rounded-xl shadow-dropdown
+                className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-[384px] rounded-xl shadow-dropdown
                   border border-border-light dark:border-border-dark overflow-hidden z-50
                   bg-surface-light dark:bg-surface-dark"
               >

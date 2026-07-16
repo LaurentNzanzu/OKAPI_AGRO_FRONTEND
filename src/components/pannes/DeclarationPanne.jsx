@@ -255,10 +255,19 @@ const DeclarationPanne = () => {
       // Créer une nouvelle instance du scanner
       html5QrCodeRef.current = new Html5Qrcode(containerId);
 
-      // Configuration du scanner avec gestion d'erreur améliorée
+      // Configuration du scanner responsive (calcul dynamique du cadre pour éviter les débordements sur petit écran)
+      const qrboxFunction = (viewfinderWidth, viewfinderHeight) => {
+        const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+        const qrboxSize = Math.max(Math.floor(minEdgeSize * 0.7), 150);
+        return {
+          width: qrboxSize,
+          height: qrboxSize
+        };
+      };
+
       const config = {
         fps: 10,
-        qrbox: { width: 250, height: 250 },
+        qrbox: qrboxFunction,
         aspectRatio: 1.0,
       };
 
@@ -446,7 +455,7 @@ const DeclarationPanne = () => {
   };
 
   return (
-    <div className="app-page max-w-3xl mx-auto w-full">
+    <div className="app-page max-w-3xl mx-auto w-full px-4 sm:px-6 md:px-0">
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-gray-700 dark:text-slate-300 p-1" aria-label={t('common.back')}>
           <AppIcon icon={ArrowLeftIcon} size="md" />
@@ -457,7 +466,7 @@ const DeclarationPanne = () => {
         </h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border p-4 sm:p-6 space-y-4 sm:space-y-6">
         {!bien ? (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
@@ -478,7 +487,7 @@ const DeclarationPanne = () => {
                     onChange={(e) => handleSearchChange(e.target.value)}
                     onFocus={handleFocus}
                     onBlur={handleBlur}
-                    className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                    className="w-full pl-9 pr-4 py-2.5 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent min-h-[44px]"
                     autoComplete="off"
                   />
                 </div>
@@ -547,7 +556,7 @@ const DeclarationPanne = () => {
                 type="button"
                 onClick={handleScanQR}
                 disabled={isScanning || checkingCamera || !cameraAvailable}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                className="px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors min-h-[44px]"
                 title={!cameraAvailable ? "Caméra non disponible" : "Scanner un QR Code"}
               >
                 <AppIcon icon={QrCodeIcon} size="sm" className="text-white" />
@@ -566,7 +575,7 @@ const DeclarationPanne = () => {
           </div>
         ) : (
           <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-lg border border-primary-200 dark:border-primary-800">
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
               <div>
                 <p className="text-sm text-gray-500 dark:text-slate-400">{t('pannes.assetLabel')}</p>
                 <p className="font-medium text-gray-900 dark:text-slate-100 text-lg">{getBienLabel(bien)}</p>
@@ -600,7 +609,7 @@ const DeclarationPanne = () => {
                   setSearchResults([]);
                   setShowSuggestions(false);
                 }} 
-                className="text-sm text-red-500 hover:text-red-700 flex items-center gap-1"
+                className="text-sm text-red-500 hover:text-red-700 flex items-center gap-1 min-h-[44px] py-1 sm:py-0 self-end sm:self-start"
               >
                 <AppIcon icon={XMarkIcon} size="xs" />
                 {t('pannes.changeAsset')}
@@ -612,13 +621,13 @@ const DeclarationPanne = () => {
         {/* Types de panne */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{t('pannes.breakdownType')} *</label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {TYPES_PANNE.map(type => (
               <button
                 key={type.value}
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, type_panne: type.value }))}
-                className={`px-3 py-2 rounded-lg border text-sm transition-all inline-flex items-center gap-1.5 ${
+                className={`px-3 py-2.5 rounded-lg border text-sm transition-all inline-flex items-center justify-center sm:justify-start gap-1.5 min-h-[44px] ${
                   formData.type_panne === type.value 
                     ? 'bg-primary-600 text-white border-primary-600' 
                     : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800'
@@ -638,7 +647,7 @@ const DeclarationPanne = () => {
               type="text"
               value={formData.type_panne_personnalise}
               onChange={(e) => setFormData(prev => ({ ...prev, type_panne_personnalise: e.target.value }))}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-600"
+              className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-600 min-h-[44px]"
               placeholder="Précisez le type de panne..."
             />
           </div>
@@ -647,13 +656,13 @@ const DeclarationPanne = () => {
         {/* Priorité */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{t('pannes.priority')} *</label>
-          <div className="flex gap-2 flex-wrap">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3">
             {PRIORITES.map(prio => (
               <button
                 key={prio.value}
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, priorite: prio.value }))}
-                className={`px-4 py-2 rounded-lg border text-sm transition-all inline-flex items-center gap-1.5 ${
+                className={`px-4 py-2.5 rounded-lg border text-sm transition-all inline-flex items-center justify-center gap-1.5 min-h-[44px] ${
                   formData.priorite === prio.value 
                     ? 'bg-primary-600 text-white border-primary-600' 
                     : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800'
@@ -673,7 +682,7 @@ const DeclarationPanne = () => {
             value={formData.diagnostic}
             onChange={(e) => setFormData(prev => ({ ...prev, diagnostic: e.target.value }))}
             rows={4}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-600"
+            className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-600"
             placeholder={t('pannes.diagnosticPlaceholder')}
           />
           <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
@@ -687,18 +696,18 @@ const DeclarationPanne = () => {
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-4 border-t">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t">
           <button 
             type="button" 
             onClick={() => navigate(-1)} 
-            className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-lg"
+            className="w-full sm:w-auto px-4 py-2.5 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded-lg min-h-[44px] flex items-center justify-center"
           >
             {t('common.cancel')}
           </button>
           <button 
             type="submit" 
             disabled={loading} 
-            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 inline-flex items-center gap-2"
+            className="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 inline-flex items-center justify-center gap-2 min-h-[44px]"
           >
             {loading ? t('pannes.declaring') : (
               <>
@@ -713,7 +722,7 @@ const DeclarationPanne = () => {
       {/* MODAL DE SCAN QR CODE AVEC html5-qrcode */}
       {isScanning && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-md p-6 relative">
+          <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-md p-4 sm:p-6 relative">
             <button
               onClick={closeScanner}
               className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 z-10 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800"
@@ -739,21 +748,21 @@ const DeclarationPanne = () => {
               </div>
             ) : (
               <>
-                <div className="relative overflow-hidden rounded-lg bg-black">
+                <div className="relative overflow-hidden rounded-lg bg-black aspect-square w-full max-w-[320px] mx-auto">
                   <div
                     id="qr-scanner-container"
                     ref={scannerContainerRef}
-                    className="w-full"
-                    style={{ minHeight: '300px' }}
+                    className="w-full h-full"
+                    style={{ minHeight: '250px' }}
                   />
                   
                   {/* Cadre de visée */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-48 h-48 border-2 border-white rounded-lg shadow-[0_0_0_100vh_rgba(0,0,0,0.5)]" />
+                    <div className="w-40 h-40 sm:w-48 sm:h-48 border-2 border-white rounded-lg shadow-[0_0_0_100vh_rgba(0,0,0,0.5)]" />
                   </div>
                   
                   {/* Message d'information */}
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 dark:bg-black/80 px-3 py-1 rounded text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 dark:bg-black/80 px-3 py-2 rounded text-xs text-gray-700 dark:text-gray-300 max-w-[90%] text-center shadow-sm">
                     {cameraStarted ? 'Positionnez le QR code dans le cadre' : 'Initialisation de la caméra...'}
                   </div>
                 </div>

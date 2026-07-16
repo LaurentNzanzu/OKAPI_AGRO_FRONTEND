@@ -200,15 +200,15 @@ const ListeBiens = () => {
         }
         icon={CubeIcon}
         action={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
             {canPreviewInventory && (
-              <Button variant="secondary" onClick={handleApercuInventaire} disabled={loadingInventaire}>
+              <Button variant="secondary" onClick={handleApercuInventaire} disabled={loadingInventaire} className="w-full sm:w-auto">
                 <EyeIcon className="w-4 h-4" />
                 {loadingInventaire ? t('common.loading') : t('assets.previewInventory')}
               </Button>
             )}
             {canCreateBien && (
-              <Button onClick={() => navigate('/biens/nouveau')}>
+              <Button onClick={() => navigate('/biens/nouveau')} className="w-full sm:w-auto">
                 <PlusIcon className="w-4 h-4" />
                 {t('assets.newAsset')}
               </Button>

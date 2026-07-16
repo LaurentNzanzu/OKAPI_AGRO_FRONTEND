@@ -370,14 +370,10 @@
 }
 
 .af-auth__link-forgot-inline {
-  position: absolute;
-  top: -22px;
-  right: 0;
   font-size: 0.75rem;
   font-weight: 500;
   color: #64748b;
   text-decoration: none;
-  z-index: 2;
 }
 
 .af-auth__link-forgot-inline:hover {

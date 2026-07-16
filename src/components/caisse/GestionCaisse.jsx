@@ -79,7 +79,7 @@ export const GestionCaisse = ({ onApprovisionner, onRapprochement, onViewPDF }) 
             )}
 
             {/* Synthese Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg border-0">
                     <div className="flex justify-between items-center">
                         <div>
@@ -201,7 +201,7 @@ export const GestionCaisse = ({ onApprovisionner, onRapprochement, onViewPDF }) 
                             <ClockIcon className="h-5 w-5 text-indigo-500" />
                             {t('caisse.historique')}
                         </h4>
-                        <div className="overflow-x-auto">
+                        <div className="app-table-wrap">
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-gray-50 dark:bg-slate-800 text-xs font-semibold uppercase text-gray-500 dark:text-slate-400">
                                     <tr>

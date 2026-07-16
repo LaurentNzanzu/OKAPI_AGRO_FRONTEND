@@ -297,7 +297,7 @@ const WorkflowAmortissementStepper = ({ idAmortissement, onWorkflowUpdate }) => 
                     </h4>
                     {canActOnCaisse ? (
                         <form onSubmit={handleVerifierTresorerie} className="space-y-4">
-                            <div className="flex items-center gap-6">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
                                 <label className="flex items-center gap-2 cursor-pointer font-medium text-sm">
                                     <input 
                                         type="radio" 
@@ -326,13 +326,13 @@ const WorkflowAmortissementStepper = ({ idAmortissement, onWorkflowUpdate }) => 
                                     value={commentaireCaisse}
                                     onChange={(e) => setCommentaireCaisse(e.target.value)}
                                     placeholder="Ex: Fonds vérifiés en caisse principale..."
-                                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800"
+                                    className="w-full px-3 py-2.5 text-sm border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800"
                                 />
                             </div>
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm"
+                                className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm flex items-center justify-center"
                             >
                                 {submitting ? "Enregistrement..." : "Valider l'étape Caisse"}
                             </button>
@@ -354,7 +354,7 @@ const WorkflowAmortissementStepper = ({ idAmortissement, onWorkflowUpdate }) => 
                     </h4>
                     {canActOnDg ? (
                         <form onSubmit={handleValiderDecaissement} className="space-y-4">
-                            <div className="flex items-center gap-6">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
                                 <label className="flex items-center gap-2 cursor-pointer font-medium text-sm">
                                     <input 
                                         type="radio" 
@@ -382,14 +382,14 @@ const WorkflowAmortissementStepper = ({ idAmortissement, onWorkflowUpdate }) => 
                                     value={motifDg}
                                     onChange={(e) => setMotifDg(e.target.value)}
                                     placeholder="Instructions complémentaires pour la comptabilité..."
-                                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800"
+                                    className="w-full px-3 py-2.5 text-sm border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800"
                                     rows="2"
                                 />
                             </div>
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm"
+                                className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm flex items-center justify-center"
                             >
                                 {submitting ? "Traitement et Génération PDF..." : "Confirmer la décision DG"}
                             </button>
@@ -418,7 +418,7 @@ const WorkflowAmortissementStepper = ({ idAmortissement, onWorkflowUpdate }) => 
                                     value={pieceUrl}
                                     onChange={(e) => setPieceUrl(e.target.value)}
                                     placeholder="Ex: /uploads/pieces/bon_decaissement_signe.pdf"
-                                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800"
+                                    className="w-full px-3 py-2.5 text-sm border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800"
                                 />
                             </div>
                             <div>
@@ -428,13 +428,13 @@ const WorkflowAmortissementStepper = ({ idAmortissement, onWorkflowUpdate }) => 
                                     value={commentaireComptable}
                                     onChange={(e) => setCommentaireComptable(e.target.value)}
                                     placeholder="Ex: Écriture vérifiée et verrouillée définitivement."
-                                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800"
+                                    className="w-full px-3 py-2.5 text-sm border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800"
                                 />
                             </div>
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm"
+                                className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm flex items-center justify-center"
                             >
                                 {submitting ? "Verrouillage..." : "Valider et Verrouiller Définitivement"}
                             </button>

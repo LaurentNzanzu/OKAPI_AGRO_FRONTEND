@@ -68,7 +68,7 @@ const DecisionStrategiqueCard = ({ decision, onRefresh }) => {
                 )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div className="bg-white dark:bg-slate-900/50 p-3 rounded-lg">
                     <p className="text-sm text-gray-500 dark:text-slate-400 flex items-center gap-1">
                         <AppIcon icon={CurrencyDollarIcon} size="xs" />

@@ -161,8 +161,8 @@ export const WorkflowAmortissement = ({ idAmortissement, currentRole, onWorkflow
             )}
 
             {/* Stepper Progress Bar */}
-            <div className="relative flex justify-between items-center w-full bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-100 dark:border-slate-800/80">
-                <div className="absolute top-[37px] left-10 right-10 h-0.5 bg-gray-200 dark:bg-slate-800 -z-0"></div>
+            <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center w-full bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 gap-4 md:gap-0">
+                <div className="hidden md:block absolute top-[37px] left-10 right-10 h-0.5 bg-gray-200 dark:bg-slate-800 -z-0"></div>
                 {steps.map((step, idx) => {
                     const status = getStepStatus(step.key, idx);
                     const isCompleted = status === 'completed';
@@ -188,16 +188,18 @@ export const WorkflowAmortissement = ({ idAmortissement, currentRole, onWorkflow
                     }
 
                     return (
-                        <div key={step.key} className="flex flex-col items-center flex-1 relative z-10">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${circleClass}`}>
+                        <div key={step.key} className="flex flex-row md:flex-col items-center md:items-center gap-3 md:gap-0 flex-1 relative z-10 w-full md:w-auto">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 shrink-0 ${circleClass}`}>
                                 {icon}
                             </div>
-                            <span className={`text-xs font-semibold mt-2 ${isActive ? 'text-primary-600 dark:text-primary-400 font-bold' : 'text-gray-500 dark:text-slate-400'}`}>
-                                {step.label}
-                            </span>
-                            <span className="text-[10px] text-gray-400 dark:text-slate-500">
-                                {step.role}
-                            </span>
+                            <div className="flex flex-col md:items-center">
+                                <span className={`text-xs font-semibold md:mt-2 ${isActive ? 'text-primary-600 dark:text-primary-400 font-bold' : 'text-gray-500 dark:text-slate-400'}`}>
+                                    {step.label}
+                                </span>
+                                <span className="text-[10px] text-gray-400 dark:text-slate-500">
+                                    {step.role}
+                                </span>
+                            </div>
                         </div>
                     );
                 })}
@@ -285,10 +287,10 @@ export const WorkflowAmortissement = ({ idAmortissement, currentRole, onWorkflow
                                         disabled={actionLoading}
                                     />
                                 </div>
-                                <div className="flex gap-3">
+                                <div className="flex flex-col sm:flex-row gap-3">
                                     <Button
                                         variant="success"
-                                        className="flex-1"
+                                        className="w-full sm:flex-1 min-h-[44px]"
                                         onClick={() => handleCaisseAction(true)}
                                         disabled={actionLoading}
                                     >
@@ -296,7 +298,7 @@ export const WorkflowAmortissement = ({ idAmortissement, currentRole, onWorkflow
                                     </Button>
                                     <Button
                                         variant="danger"
-                                        className="flex-1"
+                                        className="w-full sm:flex-1 min-h-[44px]"
                                         onClick={() => handleCaisseAction(false)}
                                         disabled={actionLoading}
                                     >
@@ -334,10 +336,10 @@ export const WorkflowAmortissement = ({ idAmortissement, currentRole, onWorkflow
                                         disabled={actionLoading}
                                     />
                                 </div>
-                                <div className="flex gap-3">
+                                <div className="flex flex-col sm:flex-row gap-3">
                                     <Button
                                         variant="success"
-                                        className="flex-1"
+                                        className="w-full sm:flex-1 min-h-[44px]"
                                         onClick={() => handleDGAction(true)}
                                         disabled={actionLoading}
                                     >
@@ -345,7 +347,7 @@ export const WorkflowAmortissement = ({ idAmortissement, currentRole, onWorkflow
                                     </Button>
                                     <Button
                                         variant="danger"
-                                        className="flex-1"
+                                        className="w-full sm:flex-1 min-h-[44px]"
                                         onClick={() => handleDGAction(false)}
                                         disabled={actionLoading}
                                     >

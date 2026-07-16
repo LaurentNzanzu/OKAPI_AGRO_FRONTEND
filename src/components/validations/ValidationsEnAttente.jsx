@@ -100,10 +100,10 @@ const ValidationsEnAttente = () => {
             </div>
 
             {/* Onglets de Navigation */}
-            <div className="flex border-b border-gray-200 dark:border-slate-800 mb-6 bg-white dark:bg-slate-900 p-2 rounded-xl shadow-sm">
+            <div className="flex flex-col sm:flex-row border-b border-gray-200 dark:border-slate-800 mb-6 bg-white dark:bg-slate-900 p-2 rounded-xl shadow-sm gap-2">
                 <button
                     onClick={() => setActiveTab('amortissements')}
-                    className={`flex-1 py-3 px-4 font-semibold text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'amortissements'
+                    className={`w-full sm:flex-1 py-3 px-4 font-semibold text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'amortissements'
                             ? 'bg-primary-600 text-white shadow-md'
                             : 'text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800'
                         }`}
@@ -113,13 +113,13 @@ const ValidationsEnAttente = () => {
                 </button>
                 <button
                     onClick={() => setActiveTab('besoins')}
-                    className={`flex-1 py-3 px-4 font-semibold text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'besoins'
+                    className={`w-full sm:flex-1 py-3 px-4 font-semibold text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'besoins'
                             ? 'bg-primary-600 text-white shadow-md'
                             : 'text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800'
                         }`}
                 >
                     <ClockIcon className="w-5 h-5" />
-                    <span>Demandes & Pièces de Rechange ({besoins.length})</span>
+                    <span>Demandes & Pièces ({besoins.length})</span>
                 </button>
             </div>
 
