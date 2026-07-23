@@ -14,7 +14,7 @@ import {
     ArrowBack, Edit, Delete, QrCode, History, Warning,
     CheckCircle, Build, AccountBalance, CalendarToday,
     LocationOn, AttachMoney, Info, PieChart, DirectionsCar,
-    Print, Calculate, Visibility
+    Print, Calculate, Visibility, Forum
 } from '@mui/icons-material';
 import { biensService } from '../../services/biens';
 import { useAuth } from '../../hooks/useAuth';
@@ -34,18 +34,14 @@ import CessionBien from '../cessions/CessionBien';
 import RebutBien from '../cessions/RebutBien';
 import DepreciationHistory from '../amortissements/DepreciationHistory';
 import etatsService from '../../services/etats';
-// ✅ Remplacer l'import défectueux par le composant local (défini dans ce fichier)
-// import CessionEligibilitySection from './FicheImmobilisation';  // ❌ À SUPPRIMER
 import CessionModal from '../cessions/CessionModal';
+import ConcertationsTab from '../concertations/ConcertationsTab';
+import api from '../../services/api';
 
-// Helper pour vérifier si une valeur est valide
 const hasValidValue = (value) => {
     return value !== null && value !== undefined && value !== '' && value !== '-';
 };
 
-// ============================================================
-// ✅ COMPOSANT CessionEligibilitySection (intégré localement)
-// ============================================================
 const CessionEligibilitySection = ({ bienId, onCessionClick }) => {
     const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
@@ -145,16 +141,13 @@ const CessionEligibilitySection = ({ bienId, onCessionClick }) => {
     );
 };
 
-// ============================================================
-// ✅ COMPOSANT PRINCIPAL FicheBien
-// ============================================================
 const FicheBien = () => {
     const { t, lang } = useTranslation();
     const { id } = useParams();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const panneId = searchParams.get('panne_id');
-    const { canCreateMouvementType, hasRole } = useAuth();
+    const { canCreateMouvementType, hasRole, user } = useAuth();
     const {
         canEditBien,
         canDeleteBien,
@@ -172,11 +165,20 @@ const FicheBien = () => {
     const [qrDialogOpen, setQrDialogOpen] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState({ open: false });
 
-    // État pour le modal d'amortissement
     const [showAmortissementModal, setShowAmortissementModal] = useState(false);
     const [amortissementSuccess, setAmortissementSuccess] = useState(false);
     const [showCessionModal, setShowCessionModal] = useState(false);
     const [showRebutModal, setShowRebutModal] = useState(false);
+
+    const [eligibilite, setEligibilite] = useState({
+        cession: { eligible: false, raison: '' },
+        rebut: { eligible: false, raison: '' }
+    });
+    const [loadingElig, setLoadingElig] = useState(false);
+
+    // ✅ Vérifier si l'utilisateur est validateur (DG, COMPTABLE ou ADMIN)
+    const userRoles = user?.roles || [];
+    const isValidator = userRoles.some(role => ['DG', 'COMPTABLE', 'ADMIN'].includes(role));
 
     useEffect(() => {
         fetchBien();
@@ -191,6 +193,10 @@ const FicheBien = () => {
             if (result.data) {
                 setBien(result.data);
                 setError(null);
+                // ✅ Ne charger l'éligibilité que si l'utilisateur est validateur
+                if (isValidator) {
+                    fetchEligibilite(result.data.id_bien);
+                }
             } else if (result.denied) {
                 setError(result.error || t('assets.accessDenied'));
                 setBien(null);
@@ -203,6 +209,29 @@ const FicheBien = () => {
             setBien(null);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchEligibilite = async (bienId) => {
+        if (!bienId) return;
+        try {
+            setLoadingElig(true);
+            const cessionResponse = await api.get(`/concertations/bien/${bienId}/eligibilite/CESSION`);
+            const rebutResponse = await api.get(`/concertations/bien/${bienId}/eligibilite/REBUT`);
+            setEligibilite({
+                cession: {
+                    eligible: cessionResponse.data.eligible || false,
+                    raison: cessionResponse.data.raison || ''
+                },
+                rebut: {
+                    eligible: rebutResponse.data.eligible || false,
+                    raison: rebutResponse.data.raison || ''
+                }
+            });
+        } catch (err) {
+            console.error('Erreur chargement éligibilité:', err);
+        } finally {
+            setLoadingElig(false);
         }
     };
 
@@ -219,7 +248,6 @@ const FicheBien = () => {
 
     const handleTabChange = (_, newValue) => setActiveTab(newValue);
 
-    // Impression via l'API backend
     const handlePrintFiche = async () => {
         if (!bien || !bien.id_bien) {
             setError(t('assets.printNoData'));
@@ -242,28 +270,22 @@ const FicheBien = () => {
         window.open(`/prints/fiche-bien/${bien.id_bien}`, '_blank', 'noopener,noreferrer');
     };
 
-    // ✅ Vérifie si l'utilisateur peut calculer l'amortissement
     const canCalculateAmortissement = () => {
-        // Le comptable, l'admin et le DG peuvent calculer l'amortissement
         return hasRole('COMPTABLE') || hasRole('ADMIN') || hasRole('DG');
     };
 
-    // ✅ Ouverture du modal d'amortissement
     const handleOpenAmortissement = () => {
         setShowAmortissementModal(true);
     };
 
-    // ✅ Fermeture du modal d'amortissement
     const handleCloseAmortissement = () => {
         setShowAmortissementModal(false);
         if (amortissementSuccess) {
             setAmortissementSuccess(false);
-            // Optionnel: recharger les données du bien si nécessaire
             fetchBien();
         }
     };
 
-    // ✅ Callback après succès du calcul d'amortissement
     const handleAmortissementSuccess = () => {
         setAmortissementSuccess(true);
         setTimeout(() => {
@@ -398,7 +420,6 @@ const FicheBien = () => {
     return (
         <ThemeProvider theme={okapiMuiTheme}>
             <Box sx={{ p: 3 }}>
-                {/* Modal de calcul d'amortissement */}
                 <Dialog
                     open={showAmortissementModal}
                     onClose={handleCloseAmortissement}
@@ -423,7 +444,6 @@ const FicheBien = () => {
                     </DialogActions>
                 </Dialog>
 
-                {/* En-tête */}
                 <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'stretch', md: 'center' }, justifyItems: 'space-between', gap: 2, mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
                         <IconButton onClick={() => navigate('/biens')} size="small">
@@ -505,7 +525,6 @@ const FicheBien = () => {
                 )}
 
                 <Grid container spacing={3}>
-                    {/* Colonne gauche */}
                     <Grid item xs={12} lg={8}>
                         <Paper sx={{ p: 3 }}>
                             <Tabs key={lang} value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }} variant="scrollable" scrollButtons="auto">
@@ -515,6 +534,9 @@ const FicheBien = () => {
                                 <Tab label={t('assets.tabComponents')} icon={<PieChart fontSize="small" />} iconPosition="start" />
                                 <Tab label={t('assets.tabDepreciations')} icon={<AccountBalance fontSize="small" />} iconPosition="start" />
                                 <Tab label={t('assets.tabMovements')} icon={<DirectionsCar fontSize="small" />} iconPosition="start" />
+                                {isValidator && (
+                                    <Tab label={t('assets.tabConcertations')} icon={<Forum fontSize="small" />} iconPosition="start" />
+                                )}
                             </Tabs>
 
                             {activeTab === 0 && (
@@ -709,10 +731,16 @@ const FicheBien = () => {
                                     />
                                 </Box>
                             )}
+
+                            {activeTab === 6 && isValidator && (
+                                <ConcertationsTab
+                                    bienId={bien.id_bien}
+                                    onEligibilityChange={fetchEligibilite}
+                                />
+                            )}
                         </Paper>
                     </Grid>
 
-                    {/* Colonne droite */}
                     <Grid item xs={12} lg={4}>
                         <Paper sx={{ p: 3, textAlign: 'center', mb: 3 }}>
                             <Typography variant="h6" gutterBottom>{t('assets.qrCode')}</Typography>
@@ -744,13 +772,15 @@ const FicheBien = () => {
                             </Typography>
                         </Paper>
 
-                        {/* ✅ Section éligibilité cession utilisant le composant local */}
-                        <Box sx={{ mb: 3 }}>
-                            <CessionEligibilitySection
-                                bienId={bien.id_bien}
-                                onCessionClick={() => setShowCessionModal(true)}
-                            />
-                        </Box>
+                        {/* ✅ Section éligibilité cession visible seulement pour les validateurs */}
+                        {isValidator && (
+                            <Box sx={{ mb: 3 }}>
+                                <CessionEligibilitySection
+                                    bienId={bien.id_bien}
+                                    onCessionClick={() => setShowCessionModal(true)}
+                                />
+                            </Box>
+                        )}
 
                         {canViewPurchasePrice && (
                             <Paper sx={{ p: 3, mb: 3 }}>
@@ -832,29 +862,40 @@ const FicheBien = () => {
                                         </Button>
                                     </Grid>
                                 )}
-                                {canCalculateAmortissement() && bien.statut_comptable !== 'CEDE' && bien.statut_comptable !== 'MIS_AU_REBUT' && (
+                                {/* ✅ Boutons de cession/rebut visibles seulement pour les validateurs */}
+                                {isValidator && canCalculateAmortissement() && bien.statut_comptable !== 'CEDE' && bien.statut_comptable !== 'MIS_AU_REBUT' && (
                                     <>
                                         <Grid item xs={6} sx={{ mt: 1 }}>
-                                            <Button
-                                                variant="outlined"
-                                                size="small"
-                                                fullWidth
-                                                color="success"
-                                                onClick={() => setShowCessionModal(true)}
-                                            >
-                                                {t('assets.disposeAsset')}
-                                            </Button>
+                                            <Tooltip title={loadingElig ? t('common.loading') : (eligibilite.cession?.eligible ? '' : (eligibilite.cession?.raison || t('assets.cessionNotAllowed')))}>
+                                                <span>
+                                                    <Button
+                                                        variant="outlined"
+                                                        size="small"
+                                                        fullWidth
+                                                        color="success"
+                                                        onClick={() => setShowCessionModal(true)}
+                                                        disabled={!eligibilite.cession?.eligible || loadingElig}
+                                                    >
+                                                        {t('assets.disposeAsset')}
+                                                    </Button>
+                                                </span>
+                                            </Tooltip>
                                         </Grid>
                                         <Grid item xs={6} sx={{ mt: 1 }}>
-                                            <Button
-                                                variant="outlined"
-                                                size="small"
-                                                fullWidth
-                                                color="error"
-                                                onClick={() => setShowRebutModal(true)}
-                                            >
-                                                {t('assets.scrapAsset')}
-                                            </Button>
+                                            <Tooltip title={loadingElig ? t('common.loading') : (eligibilite.rebut?.eligible ? '' : (eligibilite.rebut?.raison || t('assets.rebutNotAllowed')))}>
+                                                <span>
+                                                    <Button
+                                                        variant="outlined"
+                                                        size="small"
+                                                        fullWidth
+                                                        color="error"
+                                                        onClick={() => setShowRebutModal(true)}
+                                                        disabled={!eligibilite.rebut?.eligible || loadingElig}
+                                                    >
+                                                        {t('assets.scrapAsset')}
+                                                    </Button>
+                                                </span>
+                                            </Tooltip>
                                         </Grid>
                                     </>
                                 )}
@@ -894,7 +935,6 @@ const FicheBien = () => {
                     </DialogContent>
                 </Dialog>
 
-                {/* Modal de cession */}
                 <CessionModal
                     isOpen={showCessionModal}
                     onClose={() => setShowCessionModal(false)}
@@ -923,13 +963,9 @@ const FicheBien = () => {
     );
 };
 
-// ============================================================
-// ✅ COMPOSANT InfoField
-// ============================================================
 const InfoField = ({ label, value, icon, copy = false, copyLabel }) => {
     const langCtx = useTranslationOptional();
     const resolvedCopyLabel = copyLabel ?? langCtx?.t('assets.copy') ?? 'Copier';
-    // Ne pas afficher si la valeur est vide
     if (!hasValidValue(value)) {
         return null;
     }
@@ -940,7 +976,6 @@ const InfoField = ({ label, value, icon, copy = false, copyLabel }) => {
         }
     };
 
-    // Si value est un élément React (comme Chip), le rendre directement
     if (React.isValidElement(value)) {
         return (
             <Box>

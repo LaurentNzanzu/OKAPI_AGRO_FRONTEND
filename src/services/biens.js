@@ -104,28 +104,69 @@ export const biensService = {
   },
 
   // ============================================================
-  // NOUVELLES MÉTHODES POUR LA TÂCHE 2 - CESSION
+  // MÉTHODES POUR LA CONCERTATION (CESSION & REBUT)
   // ============================================================
 
   /**
-   * Vérifie l'éligibilité d'un bien à la cession (4 règles)
+   * Vérifie l'éligibilité à la cession et au rebut (via l'API de concertation)
+   * @param {number} bienId - ID du bien
+   */
+  verifierEligibiliteCessionEtRebut: async (bienId) => {
+    // Utiliser l'endpoint de concertation pour vérifier l'éligibilité
+    const response = await api.get(`/concertations/bien/${bienId}/eligibilite/cession`);
+    const cession = response.data;
+    
+    const responseRebut = await api.get(`/concertations/bien/${bienId}/eligibilite/rebut`);
+    const rebut = responseRebut.data;
+    
+    return {
+      cession: {
+        eligible: cession.eligible || false,
+        validation_dg: cession.validation_dg || false,
+        validation_comptable: cession.validation_comptable || false,
+        raison: cession.raison || 'Validation double en attente'
+      },
+      rebut: {
+        eligible: rebut.eligible || false,
+        validation_dg: rebut.validation_dg || false,
+        validation_comptable: rebut.validation_comptable || false,
+        diagnostic_irrecuperable: rebut.diagnostic_irrecuperable || false,
+        raison: rebut.raison || 'Validation double en attente'
+      }
+    };
+  },
+
+  /**
+   * Vérifie l'éligibilité à la cession (via l'API de concertation)
+   * Utilisée par le composant CessionEligibilitySection
    * @param {number} bienId - ID du bien
    */
   verifierEligibiliteCession: async (bienId) => {
+    const response = await api.get(`/concertations/bien/${bienId}/eligibilite/CESSION`);
+    return response.data;
+  },
+
+  /**
+   * Vérifie l'éligibilité au rebut (via l'API de concertation)
+   * @param {number} bienId - ID du bien
+   */
+  verifierEligibiliteRebut: async (bienId) => {
+    const response = await api.get(`/concertations/bien/${bienId}/eligibilite/REBUT`);
+    return response.data;
+  },
+
+  /**
+   * Vérifie l'éligibilité à la cession avec les critères métier (4 règles)
+   * Endpoint legacy /biens/{id}/cession/eligibilite
+   * @param {number} bienId - ID du bien
+   */
+  verifierEligibiliteCessionMetier: async (bienId) => {
     const response = await api.get(`${BIENS_ENDPOINT}/${bienId}/cession/eligibilite`);
     return response.data;
   },
 
   /**
-   * Récupère la liste des biens éligibles à la cession
-   */
-  getBiensEligiblesCession: async () => {
-    const response = await api.get(`${BIENS_ENDPOINT}/eligibles-cession`);
-    return response.data;
-  },
-
-  /**
-   * Demande une cession pour un bien
+   * Demande une cession pour un bien (avec vérification double validation)
    * @param {number} bienId - ID du bien
    * @param {Object} data - Données de la cession
    * @param {number} data.prix_vente - Prix de vente
@@ -143,11 +184,34 @@ export const biensService = {
   },
 
   /**
+   * Demande une mise au rebut pour un bien (avec vérification double validation + diagnostic)
+   * @param {number} bienId - ID du bien
+   * @param {Object} data - Données du rebut
+   */
+  demanderRebut: async (bienId, data) => {
+    const response = await api.post(`${BIENS_ENDPOINT}/${bienId}/rebut`, data);
+    return response.data;
+  },
+
+  /**
    * Récupère le statut du workflow de cession d'un bien
    * @param {number} bienId - ID du bien
    */
   getCessionWorkflow: async (bienId) => {
     const response = await api.get(`${BIENS_ENDPOINT}/${bienId}/cession/workflow`);
+    return response.data;
+  },
+
+  /**
+   * Récupère les discussions de concertation d'un bien
+   * @param {number} bienId - ID du bien
+   * @param {string} typeValidation - Type de validation (CESSION ou REBUT) - Optionnel
+   */
+  getConcertations: async (bienId, typeValidation = null) => {
+    const url = typeValidation 
+      ? `/concertations/bien/${bienId}?type_validation=${typeValidation}`
+      : `/concertations/bien/${bienId}`;
+    const response = await api.get(url);
     return response.data;
   },
 

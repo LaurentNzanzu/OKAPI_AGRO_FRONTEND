@@ -92,6 +92,7 @@ import {
   GestionCaisse,
   GestionEtats,
   CaissePage,
+  ConcertationsTab
 } from './routes/lazyPages';
 
 const Lazy = ({ children }) => (
@@ -226,6 +227,7 @@ function App() {
                   <Route path="prints/etat-besoin/:id" element={<Lazy><PrintEtatBesoin /></Lazy>} />
                   <Route path="parametres" element={<Lazy><Parametres /></Lazy>} />
                   <Route path="profil" element={<Lazy><Profil /></Lazy>} />
+                  <Route path="concertations" element={<Lazy><ConcertationsTab /></Lazy>} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Route>
 
