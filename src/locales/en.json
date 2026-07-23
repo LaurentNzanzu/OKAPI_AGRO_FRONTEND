@@ -1230,7 +1230,6 @@
   "budgets.widget.solde": "Balance",
   "budgets.widget.montant": "Amount",
   "budgets.widget.viewDetails": "View details",
-
   "maintenances.alertes.title": "Maintenance Alerts",
   "maintenances.alertes.subtitle": "Monitor critical assets and automatically generated preventive maintenance",
   "maintenances.alertes.loading": "Loading alerts...",
@@ -1276,7 +1275,6 @@
   "maintenances.alertes.notAvailable": "N/A",
   "maintenances.alertes.noCriticalAssets": "No critical assets requiring surveillance",
   "maintenances.alertes.noAutoMaintenances": "No auto-generated preventive maintenance",
-
   "tableau8.title": "OHADA Table 8",
   "tableau8.subtitle": "Fixed assets and depreciation schedule",
   "tableau8.year": "Year",
@@ -1299,7 +1297,6 @@
   "tableau8.nbvEnd": "NBV End",
   "tableau8.total": "TOTAL",
   "tableau8.footer": "OHADA compliant — SYSCOHADA Table 8",
-
   "previsions.title": "Investment Forecast",
   "previsions.subtitle": "Multi-year investment plan N+1 to N+5",
   "previsions.loading": "Loading forecasts...",
@@ -1359,7 +1356,6 @@
   "etats.standard": "Standard",
   "etats.aucunBienARemplacer": "No assets to replace",
   "etats.aucuneDonnee": "No data available",
-
   "journal.title": "Asset Journal",
   "journal.subtitle": "{{count}} events recorded",
   "journal.loading": "Loading journal...",
@@ -1423,5 +1419,20 @@
   "caisse.soldeActuel": "Currently recorded balance",
   "caisse.validerRapprochement": "Validate Reconciliation",
   "caisse.effectuerRapprochement": "Perform Reconciliation",
-  "caisse.rapprochementSuccess": "Cash reconciliation completed successfully!"
+  "caisse.rapprochementSuccess": "Cash reconciliation completed successfully!",
+  "assets.cessionNotAllowed": "Cession non autorisée",
+  "assets.rebutNotAllowed": "Mise au rebut non autorisée",
+  "assets.tabConcertations": "Concertations",
+  "concertations.title": "Espace de concertation",
+  "concertations.description": "Le DG et le Comptable échangent ici pour valider conjointement les actions.",
+  "concertations.statusPending": "En attente de validation",
+  "concertations.statusPartial": "Validation partielle",
+  "concertations.statusApproved": "Validation double obtenue",
+  "concertations.statusRejected": "Rejeté",
+  "concertations.actionApprove": "Approuver",
+  "concertations.actionReject": "Rejeter",
+  "concertations.send": "Envoyer",
+  "concertations.reply": "Répondre",
+  "concertations.noDiscussions": "Aucune discussion en cours",
+  "concertations.selectDiscussion": "Sélectionnez une discussion"
 }

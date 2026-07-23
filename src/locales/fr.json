@@ -1232,7 +1232,6 @@
   "budgets.widget.solde": "Solde",
   "budgets.widget.montant": "Montant",
   "budgets.widget.viewDetails": "Voir les détails",
-
   "maintenances.alertes.title": "Alertes Maintenance",
   "maintenances.alertes.subtitle": "Surveillez les actifs critiques et les maintenances préventives auto-générées",
   "maintenances.alertes.loading": "Chargement des alertes...",
@@ -1278,7 +1277,6 @@
   "maintenances.alertes.notAvailable": "N/D",
   "maintenances.alertes.noCriticalAssets": "Aucun actif critique nécessitant une surveillance",
   "maintenances.alertes.noAutoMaintenances": "Aucune maintenance préventive auto-générée",
-
   "tableau8.title": "Tableau 8 OHADA",
   "tableau8.subtitle": "État des immobilisations et amortissements",
   "tableau8.year": "Année",
@@ -1301,7 +1299,6 @@
   "tableau8.nbvEnd": "VNC fin",
   "tableau8.total": "TOTAL",
   "tableau8.footer": "Conforme OHADA — Tableau 8 SYSCOHADA",
-
   "previsions.title": "Prévisions d'investissement",
   "previsions.subtitle": "Plan d'investissement pluriannuel N+1 à N+5",
   "previsions.loading": "Chargement des prévisions...",
@@ -1361,8 +1358,6 @@
   "etats.standard": "Standard",
   "etats.aucunBienARemplacer": "Aucun bien à remplacer",
   "etats.aucuneDonnee": "Aucune donnée disponible",
-
-
   "journal.title": "Journal des Immobilisations",
   "journal.subtitle": "{{count}} événements enregistrés",
   "journal.loading": "Chargement du journal...",
@@ -1426,5 +1421,20 @@
   "caisse.soldeActuel": "Solde enregistré actuellement",
   "caisse.validerRapprochement": "Valider le Rapprochement",
   "caisse.effectuerRapprochement": "Effectuer un Rapprochement",
-  "caisse.rapprochementSuccess": "Rapprochement de caisse effectué avec succès !"
+  "caisse.rapprochementSuccess": "Rapprochement de caisse effectué avec succès !",
+  "assets.cessionNotAllowed": "Cession non autorisée",
+  "assets.rebutNotAllowed": "Mise au rebut non autorisée",
+  "assets.tabConcertations": "Concertations",
+  "concertations.title": "Espace de concertation",
+  "concertations.description": "Le DG et le Comptable échangent ici pour valider conjointement les actions.",
+  "concertations.statusPending": "En attente de validation",
+  "concertations.statusPartial": "Validation partielle",
+  "concertations.statusApproved": "Validation double obtenue",
+  "concertations.statusRejected": "Rejeté",
+  "concertations.actionApprove": "Approuver",
+  "concertations.actionReject": "Rejeter",
+  "concertations.send": "Envoyer",
+  "concertations.reply": "Répondre",
+  "concertations.noDiscussions": "Aucune discussion en cours",
+  "concertations.selectDiscussion": "Sélectionnez une discussion"
 }

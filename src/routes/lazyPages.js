@@ -104,4 +104,6 @@ export const Tableau8OHADA = lazy(() => import('../components/rapports/Tableau8O
 export const PrevisionsFinancieres = lazy(() => import('../components/rapports/PrevisionsFinancieres'));
 export const GestionCaisse = lazy(() => import('../components/caisse/GestionCaisse'));
 export const GestionEtats = lazy(() => import('../components/etats/GestionEtats'));
-export const CaissePage = lazy(() => import('../pages/CaissePage'));
+export const CaissePage = lazy(() => import('../pages/CaissePage'));
+
+export const ConcertationsTab = lazy(() => import('../components/concertations/ConcertationsTab'));
