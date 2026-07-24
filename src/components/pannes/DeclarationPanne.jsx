@@ -16,8 +16,23 @@ import {
   QrCodeIcon,
   MagnifyingGlassIcon,
 } from '../ui/icons';
-// ✅ Import de html5-qrcode
 import { Html5Qrcode } from 'html5-qrcode';
+
+// Liste des mots-clés d'irrécupérabilité (pour la détection en temps réel)
+const MOTS_IRRECUP = [
+  'irrécupérable', 'irrecuperable', 'recuperable', 'recupere',
+  'hors d\'usage', 'hors usage', 'hors service',
+  'hs', 'h.s', 'h.s.',
+  'irreparable', 'irréparable', 'non réparable', 'non reparables',
+  'non utilisable', 'inutilisable', 'obsolescence', 'obsolète',
+  'usure totale', 'usé', 'usée', 'casse', 'cassé', 'brisé', 'bris',
+  'moteur hs', 'moteur cassé', 'châssis endommagé',
+  'endommagement', 'endommagé',
+  'fini', 'termine', 'mort', 'epuise',
+  'out of service', 'broken', 'destroyed', 'damaged',
+  'irremediable', 'incurable', 'perdu',
+  'sinistre', 'détruit', 'detruit'
+];
 
 const DeclarationPanne = () => {
   const { t } = useTranslation();
@@ -49,6 +64,10 @@ const DeclarationPanne = () => {
   const html5QrCodeRef = useRef(null);
   const scannerContainerRef = useRef(null);
 
+  // États pour l'aide au diagnostic
+  const [detectedIrrecup, setDetectedIrrecup] = useState(false);
+  const [showExamples, setShowExamples] = useState(false);
+
   // Types de panne - uniquement MECANIQUE, ELECTRIQUE, ELECTRONIQUE, AUTRE
   const TYPES_PANNE = [
     { value: 'MECANIQUE', label: t('pannes.typeMecanique'), Icon: PANNE_TYPE_CONFIG.MECANIQUE.Icon },
@@ -67,12 +86,10 @@ const DeclarationPanne = () => {
     if (bienIdFromUrl) loadBien(bienIdFromUrl);
   }, [bienIdFromUrl]);
 
-  // ✅ Vérifier la disponibilité de la caméra au chargement
   useEffect(() => {
     checkCameraAvailability();
   }, []);
 
-  // ✅ Nettoyer le scanner à la fermeture
   useEffect(() => {
     return () => {
       if (html5QrCodeRef.current) {
@@ -85,7 +102,13 @@ const DeclarationPanne = () => {
     };
   }, []);
 
-  // ✅ Vérifier si la caméra est disponible
+  // Détection en temps réel des mots-clés d'irrécupérabilité
+  useEffect(() => {
+    const diag = formData.diagnostic.toLowerCase();
+    const found = MOTS_IRRECUP.some(mot => diag.includes(mot));
+    setDetectedIrrecup(found);
+  }, [formData.diagnostic]);
+
   const checkCameraAvailability = async () => {
     setCheckingCamera(true);
     try {
@@ -94,11 +117,8 @@ const DeclarationPanne = () => {
         setCheckingCamera(false);
         return;
       }
-
-      // Vérifier si des caméras sont disponibles
       const devices = await navigator.mediaDevices.enumerateDevices();
       const cameras = devices.filter(device => device.kind === 'videoinput');
-      
       if (cameras.length === 0) {
         setCameraAvailable(false);
         setScanError('Aucune caméra trouvée sur votre appareil.');
@@ -127,7 +147,6 @@ const DeclarationPanne = () => {
     }
   };
 
-  // ✅ RECHERCHE AVEC DEBOUNCE ET AUTOCOMPLETION
   const searchBiens = useCallback(async (term) => {
     if (!term || term.length < 2) {
       setSearchResults([]);
@@ -135,14 +154,9 @@ const DeclarationPanne = () => {
       setSearching(false);
       return;
     }
-
     setSearching(true);
     try {
-      const response = await biensService.getAll({ 
-        search: term, 
-        limit: 10,
-        skip: 0
-      });
+      const response = await biensService.getAll({ search: term, limit: 10, skip: 0 });
       setSearchResults(response.biens || []);
       setShowSuggestions(response.biens?.length > 0);
     } catch (err) {
@@ -154,15 +168,12 @@ const DeclarationPanne = () => {
     }
   }, []);
 
-  // ✅ GESTION DU CHAMP DE RECHERCHE AVEC DEBOUNCE
   const handleSearchChange = (value) => {
     setSearchTerm(value);
-    
     if (bien) {
       setBien(null);
       setFormData(prev => ({ ...prev, id_bien: '' }));
     }
-
     if (value.length === 0) {
       setSearchResults([]);
       setShowSuggestions(false);
@@ -172,7 +183,6 @@ const DeclarationPanne = () => {
       }
       return;
     }
-
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
@@ -181,13 +191,9 @@ const DeclarationPanne = () => {
     }, 300);
   };
 
-  // ✅ DEMANDER LA PERMISSION CAMERA AVANT D'OUVRIR LE SCANNEUR
   const requestCameraPermission = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
-      // Arrêter immédiatement le stream après avoir obtenu la permission
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       stream.getTracks().forEach(track => track.stop());
       return true;
     } catch (err) {
@@ -207,43 +213,32 @@ const DeclarationPanne = () => {
     }
   };
 
-  // ✅ SCAN QR CODE AVEC CAMERA
   const handleScanQR = async () => {
     if (!cameraAvailable) {
       setScanError('Aucune caméra disponible sur cet appareil.');
       return;
     }
-
     setIsScanning(true);
     setScanError(null);
     setCameraStarted(false);
-    
-    // Demander la permission avant d'ouvrir le scanner
     const hasPermission = await requestCameraPermission();
     if (!hasPermission) {
       setIsScanning(false);
       return;
     }
-    
-    // Démarrer le scanner après un court délai
     setTimeout(() => {
       startScanner();
     }, 500);
   };
 
-  // ✅ DÉMARRER LE SCANNEUR
   const startScanner = async () => {
     const containerId = 'qr-scanner-container';
-    
     try {
-      // Vérifier si le conteneur existe
       const container = document.getElementById(containerId);
       if (!container) {
         setScanError("Le conteneur du scanner n'a pas été trouvé.");
         return;
       }
-
-      // Nettoyer l'instance précédente si elle existe
       if (html5QrCodeRef.current) {
         try {
           await html5QrCodeRef.current.stop();
@@ -251,41 +246,24 @@ const DeclarationPanne = () => {
         } catch (e) {}
         html5QrCodeRef.current = null;
       }
-
-      // Créer une nouvelle instance du scanner
       html5QrCodeRef.current = new Html5Qrcode(containerId);
-
-      // Configuration du scanner responsive (calcul dynamique du cadre pour éviter les débordements sur petit écran)
       const qrboxFunction = (viewfinderWidth, viewfinderHeight) => {
         const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
         const qrboxSize = Math.max(Math.floor(minEdgeSize * 0.7), 150);
-        return {
-          width: qrboxSize,
-          height: qrboxSize
-        };
+        return { width: qrboxSize, height: qrboxSize };
       };
-
-      const config = {
-        fps: 10,
-        qrbox: qrboxFunction,
-        aspectRatio: 1.0,
-      };
-
-      // Démarrer la caméra
+      const config = { fps: 10, qrbox: qrboxFunction, aspectRatio: 1.0 };
       await html5QrCodeRef.current.start(
         { facingMode: "environment" },
         config,
         onScanSuccess,
         onScanFailure
       );
-
       setCameraStarted(true);
       setScanError(null);
     } catch (err) {
       console.error("Erreur démarrage scanner:", err);
-      
       let errorMsg = "Impossible d'accéder à la caméra.";
-      
       if (err.message?.includes("Permission denied") || err.name === "NotAllowedError") {
         errorMsg = "Permission d'accès à la caméra refusée. Veuillez autoriser l'accès dans les paramètres de votre navigateur.";
       } else if (err.message?.includes("NotFoundError") || err.name === "NotFoundError") {
@@ -293,36 +271,25 @@ const DeclarationPanne = () => {
       } else if (err.message?.includes("NotReadableError")) {
         errorMsg = "La caméra est utilisée par une autre application. Veuillez fermer les autres applications utilisant la caméra.";
       }
-      
       setScanError(errorMsg);
       setCameraStarted(false);
-      
-      // Ne pas fermer le modal pour permettre à l'utilisateur de réessayer
     }
   };
 
-  // ✅ SUCCÈS DU SCAN
   const onScanSuccess = async (decodedText) => {
     if (!decodedText) return;
-    
-    // Arrêter le scanner
     try {
       if (html5QrCodeRef.current) {
         await html5QrCodeRef.current.stop();
         html5QrCodeRef.current.clear();
       }
     } catch (e) {}
-
     setIsScanning(false);
     setCameraStarted(false);
-    
     try {
-      // Appel à l'API pour rechercher le bien par QR code
       const response = await qrcodeService.scan(decodedText);
-      
       if (response.data?.found && response.data?.bien) {
         const bienData = response.data.bien;
-        // Charger l'équipement directement sans requête croisée/supplémentaire
         setBien(bienData);
         setFormData(prev => ({ ...prev, id_bien: bienData.id_bien }));
         setSearchTerm(getBienLabel(bienData));
@@ -332,7 +299,6 @@ const DeclarationPanne = () => {
         setScanError(null);
       } else {
         setScanError("Aucun bien trouvé avec ce QR code.");
-        // Ne pas réouvrir automatiquement, l'utilisateur peut cliquer sur "Réessayer"
       }
     } catch (err) {
       console.error('Erreur scan QR:', err);
@@ -344,16 +310,13 @@ const DeclarationPanne = () => {
     }
   };
 
-  // ✅ ÉCHEC DU SCAN (ignorer les erreurs normales)
   const onScanFailure = (err) => {
-    // Ignorer les erreurs normales (pas de QR détecté)
     if (err?.message?.includes('No QR code') || err?.message?.includes('NoMultiFormatReaders')) {
       return;
     }
     console.warn('Erreur scan:', err);
   };
 
-  // ✅ FERMER LE SCANNEUR
   const closeScanner = async () => {
     try {
       if (html5QrCodeRef.current) {
@@ -369,30 +332,22 @@ const DeclarationPanne = () => {
     setScanError(null);
   };
 
-  // ✅ RÉESSAYER LE SCAN
   const retryScanner = async () => {
     setScanError(null);
     setCameraStarted(false);
-    
-    // Demander à nouveau la permission
     const hasPermission = await requestCameraPermission();
-    if (!hasPermission) {
-      return;
-    }
-    
+    if (!hasPermission) return;
     setTimeout(() => {
       startScanner();
     }, 500);
   };
 
-  // ✅ FERMER LES SUGGESTIONS
   const handleBlur = () => {
     setTimeout(() => {
       setShowSuggestions(false);
     }, 200);
   };
 
-  // ✅ SURVOL DU CHAMP POUR RÉAFFICHER LES SUGGESTIONS
   const handleFocus = () => {
     if (searchTerm.length >= 2 && searchResults.length > 0) {
       setShowSuggestions(true);
@@ -422,6 +377,22 @@ const DeclarationPanne = () => {
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
     }
+  };
+
+  // Insertion d'exemples de diagnostic
+  const insertExample = (type) => {
+    if (type === 'irrecup') {
+      setFormData(prev => ({
+        ...prev,
+        diagnostic: "Le moteur est irrécupérable suite à une casse sévère. Coût de réparation estimé à 40 000 USD."
+      }));
+    } else if (type === 'reparable') {
+      setFormData(prev => ({
+        ...prev,
+        diagnostic: "Panne électrique du démarreur, remplacement nécessaire. Pièce disponible, réparation possible dans les délais."
+      }));
+    }
+    setShowExamples(false);
   };
 
   const handleSubmit = async (e) => {
@@ -467,6 +438,7 @@ const DeclarationPanne = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Section recherche / sélection du bien */}
         {!bien ? (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
@@ -491,13 +463,11 @@ const DeclarationPanne = () => {
                     autoComplete="off"
                   />
                 </div>
-                
                 {searching && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     <div className="animate-spin h-4 w-4 border-2 border-primary-600 border-t-transparent rounded-full"></div>
                   </div>
                 )}
-
                 {showSuggestions && searchResults.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {searchResults.map((b) => (
@@ -539,7 +509,6 @@ const DeclarationPanne = () => {
                     ))}
                   </div>
                 )}
-
                 {showSuggestions && searchTerm.length >= 2 && searchResults.length === 0 && !searching && (
                   <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg p-4 text-center">
                     <p className="text-gray-500 dark:text-slate-400 text-sm">
@@ -551,7 +520,6 @@ const DeclarationPanne = () => {
                   </div>
                 )}
               </div>
-
               <button
                 type="button"
                 onClick={handleScanQR}
@@ -675,16 +643,71 @@ const DeclarationPanne = () => {
           </div>
         </div>
 
-        {/* Diagnostic */}
+        {/* Diagnostic avec exemples et détection */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{t('pannes.diagnostic')} *</label>
+          <div className="flex items-center justify-between">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{t('pannes.diagnostic')} *</label>
+            <button
+              type="button"
+              onClick={() => setShowExamples(!showExamples)}
+              className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 flex items-center gap-1"
+            >
+              {showExamples ? 'Masquer les exemples' : 'Voir des exemples'}
+            </button>
+          </div>
           <textarea
             value={formData.diagnostic}
             onChange={(e) => setFormData(prev => ({ ...prev, diagnostic: e.target.value }))}
             rows={4}
             className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-600"
-            placeholder={t('pannes.diagnosticPlaceholder')}
+            placeholder="Décrivez précisément la panne et l'état du bien..."
           />
+          
+          {/* Bloc d'exemples */}
+          {showExamples && (
+            <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg space-y-2">
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">📝 Exemples de diagnostic</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => insertExample('irrecup')}
+                  className="text-left text-sm p-2 bg-white dark:bg-slate-800 rounded border border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-slate-700 transition"
+                >
+                  <span className="block font-medium text-red-600 dark:text-red-400">🔴 Irrécupérable</span>
+                  <span className="text-gray-600 dark:text-gray-300 text-xs">"Le moteur est irrécupérable suite à une casse sévère..."</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertExample('reparable')}
+                  className="text-left text-sm p-2 bg-white dark:bg-slate-800 rounded border border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-slate-700 transition"
+                >
+                  <span className="block font-medium text-green-600 dark:text-green-400">🟢 Réparable</span>
+                  <span className="text-gray-600 dark:text-gray-300 text-xs">"Panne électrique du démarreur, remplacement nécessaire..."</span>
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                💡 Utilisez les mots-clés comme <strong>irrécupérable</strong>, <strong>hors d'usage</strong>, <strong>HS</strong> pour déclencher automatiquement une discussion REBUT.
+              </p>
+            </div>
+          )}
+
+          {/* Détection en temps réel */}
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-gray-500 dark:text-slate-400">
+              {formData.diagnostic.length > 0 && (
+                detectedIrrecup ? (
+                  <span className="text-red-600 dark:text-red-400 font-medium flex items-center gap-1">
+                    ⚠️ Le diagnostic indique que le bien est <strong>irrécupérable</strong> (une discussion REBUT sera proposée)
+                  </span>
+                ) : (
+                  <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
+                    ✅ Aucun indice d'irrécupérabilité détecté – le bien sera orienté vers une réparation classique
+                  </span>
+                )
+              )}
+            </span>
+          </div>
+
           <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
             Minimum 5 caractères
           </p>
@@ -719,7 +742,7 @@ const DeclarationPanne = () => {
         </div>
       </form>
 
-      {/* MODAL DE SCAN QR CODE AVEC html5-qrcode */}
+      {/* MODAL DE SCAN QR CODE */}
       {isScanning && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-md p-4 sm:p-6 relative">
@@ -755,13 +778,9 @@ const DeclarationPanne = () => {
                     className="w-full h-full"
                     style={{ minHeight: '250px' }}
                   />
-                  
-                  {/* Cadre de visée */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-40 h-40 sm:w-48 sm:h-48 border-2 border-white rounded-lg shadow-[0_0_0_100vh_rgba(0,0,0,0.5)]" />
                   </div>
-                  
-                  {/* Message d'information */}
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 dark:bg-black/80 px-3 py-2 rounded text-xs text-gray-700 dark:text-gray-300 max-w-[90%] text-center shadow-sm">
                     {cameraStarted ? 'Positionnez le QR code dans le cadre' : 'Initialisation de la caméra...'}
                   </div>
