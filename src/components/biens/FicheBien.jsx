@@ -865,40 +865,48 @@ const FicheBien = () => {
                                 {/* ✅ Boutons de cession/rebut visibles seulement pour les validateurs */}
                                 {isValidator && canCalculateAmortissement() && bien.statut_comptable !== 'CEDE' && bien.statut_comptable !== 'MIS_AU_REBUT' && (
                                     <>
-                                        <Grid item xs={6} sx={{ mt: 1 }}>
-                                            <Tooltip title={loadingElig ? t('common.loading') : (eligibilite.cession?.eligible ? '' : (eligibilite.cession?.raison || t('assets.cessionNotAllowed')))}>
-                                                <span>
-                                                    <Button
-                                                        variant="outlined"
-                                                        size="small"
-                                                        fullWidth
-                                                        color="success"
-                                                        onClick={() => setShowCessionModal(true)}
-                                                        disabled={!eligibilite.cession?.eligible || loadingElig}
-                                                    >
-                                                        {t('assets.disposeAsset')}
-                                                    </Button>
-                                                </span>
-                                            </Tooltip>
-                                        </Grid>
-                                        <Grid item xs={6} sx={{ mt: 1 }}>
-                                            <Tooltip title={loadingElig ? t('common.loading') : (eligibilite.rebut?.eligible ? '' : (eligibilite.rebut?.raison || t('assets.rebutNotAllowed')))}>
-                                                <span>
-                                                    <Button
-                                                        variant="outlined"
-                                                        size="small"
-                                                        fullWidth
-                                                        color="error"
-                                                        onClick={() => setShowRebutModal(true)}
-                                                        disabled={!eligibilite.rebut?.eligible || loadingElig}
-                                                    >
-                                                        {t('assets.scrapAsset')}
-                                                    </Button>
-                                                </span>
-                                            </Tooltip>
-                                        </Grid>
+                                        {/* ✅ Bouton Céder - UNIQUEMENT si éligible ET pas de REBUT validé */}
+                                        {eligibilite.cession?.eligible && !eligibilite.rebut?.eligible && (
+                                            <Grid item xs={6} sx={{ mt: 1 }}>
+                                                <Tooltip title={loadingElig ? t('common.loading') : ''}>
+                                                    <span>
+                                                        <Button
+                                                            variant="outlined"
+                                                            size="small"
+                                                            fullWidth
+                                                            color="success"
+                                                            onClick={() => setShowCessionModal(true)}
+                                                            disabled={!eligibilite.cession?.eligible || loadingElig}
+                                                        >
+                                                            {t('assets.disposeAsset')}
+                                                        </Button>
+                                                    </span>
+                                                </Tooltip>
+                                            </Grid>
+                                        )}
+
+                                        {/* ✅ Bouton Mise au rebut - UNIQUEMENT si éligible */}
+                                        {eligibilite.rebut?.eligible && (
+                                            <Grid item xs={6} sx={{ mt: 1 }}>
+                                                <Tooltip title={loadingElig ? t('common.loading') : ''}>
+                                                    <span>
+                                                        <Button
+                                                            variant="outlined"
+                                                            size="small"
+                                                            fullWidth
+                                                            color="error"
+                                                            onClick={() => setShowRebutModal(true)}
+                                                            disabled={!eligibilite.rebut?.eligible || loadingElig}
+                                                        >
+                                                            {t('assets.scrapAsset')}
+                                                        </Button>
+                                                    </span>
+                                                </Tooltip>
+                                            </Grid>
+                                        )}
                                     </>
                                 )}
+
                             </Grid>
                         </Paper>
                     </Grid>
