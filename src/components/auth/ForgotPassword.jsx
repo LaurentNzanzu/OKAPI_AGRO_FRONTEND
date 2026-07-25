@@ -28,14 +28,36 @@ const ForgotPassword = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [shake, setShake] = useState(false);
+  
+  // 👈 Nouveaux états pour le mode dev
+  const [devLink, setDevLink] = useState(null);
+  const [countdown, setCountdown] = useState(5);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      await authService.forgotPassword(email);
+      const response = await authService.forgotPassword(email);
       setSuccess(true);
+
+      // 🔍 Pour déboguer : Regardez dans votre console du navigateur ce que renvoie l'API
+      console.log("Réponse API forgotPassword :", response);
+
+      // Adaptez selon votre structure Axios (soit response.data, soit response directement)
+      const link = response?.data?.dev_reset_link || response?.dev_reset_link;
+
+      if (link) {
+        let timer = 5;
+        const interval = setInterval(() => {
+          timer -= 1;
+          setCountdown(timer);
+          if (timer <= 0) {
+            clearInterval(interval);
+            setDevLink(link);
+          }
+        }, 1000);
+      }
     } catch (err) {
       setError(err.response?.data?.detail || 'Erreur lors de la demande');
       setShake(true);
@@ -57,6 +79,27 @@ const ForgotPassword = () => {
             Si un compte est associé à cette adresse, vous recevrez un lien sécurisé sous 2 minutes.
             Pensez à vérifier vos spams.
           </p>
+
+          {/* 👈 Bloc d'affichage dynamique du lien de développement */}
+          {devLink ? (
+            <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-center animate-fade-in">
+              <p className="text-xs text-emerald-800 font-semibold mb-2 uppercase tracking-wider">
+                Mode Développement — Accès rapide
+              </p>
+              <a 
+                href={devLink} 
+                className="inline-block w-full py-2.5 px-4 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 shadow-sm transition-colors text-center"
+                style={{ textDecoration: 'none' }}
+              >
+                Réinitialiser mon mot de passe maintenant
+              </a>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 mb-6 italic">
+              Affichage du lien direct de test dans {countdown} secondes...
+            </p>
+          )}
+
           <Link to="/login" className="af-auth__submit af-auth__submit--outline" style={{ textDecoration: 'none', display: 'inline-flex' }}>
             Retour à la connexion
           </Link>
