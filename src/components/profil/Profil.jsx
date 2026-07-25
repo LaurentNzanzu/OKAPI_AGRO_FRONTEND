@@ -94,11 +94,11 @@ const Profil = () => {
         }
     };
 
-    // ✅ CORRECTION : Fonction pour changer le mot de passe
+    // ✅ Fonction pour changer le mot de passe avec validations renforcées
     const handlePasswordSubmit = async (e) => {
         e.preventDefault();
         
-        // Validation des champs
+        // Validation des champs (présence des champs)
         if (!passwordData.ancien_mot_de_passe) {
             setMessage({ type: 'error', text: 'Veuillez entrer votre ancien mot de passe' });
             return;
@@ -114,15 +114,32 @@ const Profil = () => {
             return;
         }
         
-        if (passwordData.nouveau_mot_de_passe.length < 6) {
-            setMessage({ type: 'error', text: 'Le mot de passe doit contenir au moins 6 caractères' });
-            return;
-        }
-        
         if (passwordData.nouveau_mot_de_passe === passwordData.ancien_mot_de_passe) {
             setMessage({ type: 'error', text: 'Le nouveau mot de passe doit être différent de l\'ancien' });
             return;
         }
+
+        // 🟢 Validations de sécurité renforcées
+        if (passwordData.nouveau_mot_de_passe.length < 8) {
+            setMessage({ type: 'error', text: 'Le mot de passe doit contenir au moins 8 caractères' });
+            return;
+        }
+        
+        if (!/[A-Z]/.test(passwordData.nouveau_mot_de_passe)) {
+            setMessage({ type: 'error', text: 'Le mot de passe doit contenir au moins une majuscule' });
+            return;
+        }
+        
+        if (!/[a-z]/.test(passwordData.nouveau_mot_de_passe)) {
+            setMessage({ type: 'error', text: 'Le mot de passe doit contenir au moins une minuscule' });
+            return;
+        }
+        
+        if (!/\d/.test(passwordData.nouveau_mot_de_passe)) {
+            setMessage({ type: 'error', text: 'Le mot de passe doit contenir au moins un chiffre' });
+            return;
+        }
+        // <-----------------------------------------------
         
         setLoading(true);
         try {
@@ -144,6 +161,7 @@ const Profil = () => {
             
             setTimeout(() => setMessage({ type: '', text: '' }), 3000);
         } catch (error) {
+            
             console.error('Erreur changement mot de passe:', error);
             let errorMessage = 'Erreur lors du changement de mot de passe';
             if (error.response?.data?.detail) {
@@ -385,7 +403,7 @@ const Profil = () => {
                                         onChange={handlePasswordChange}
                                         className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                         required
-                                        minLength={6}
+                                        minLength={8}
                                     />
                                     <button
                                         type="button"
@@ -395,7 +413,7 @@ const Profil = () => {
                                         {showNewPassword ? <EyeSlashIcon className="w-4 h-4 text-gray-400" /> : <EyeIcon className="w-4 h-4 text-gray-400" />}
                                     </button>
                                 </div>
-                                <p className="text-xs text-gray-400 mt-1">Minimum 6 caractères</p>
+                                <p className="text-xs text-gray-400 mt-1">Minimum 8 caractères, une majuscule, une minuscule et un chiffre</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Confirmer le nouveau mot de passe</label>

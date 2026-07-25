@@ -25,6 +25,10 @@ export const utilisateursService = {
         const response = await api.put(`/utilisateurs/${id}`, data);
         return response.data;
     },
+    changePassword: async (data) => {
+        const response = await api.put('/auth/me/password', data);
+        return response.data;
+    },
 
     // Supprimer
     delete: async (id) => {
