@@ -1,6 +1,6 @@
 import api from './api';
 
-const BASE_URL = '/notifications/';
+const BASE_URL = '/notifications';
 
 /** Affiche les montants en USD (remplace FCFA dans les anciennes notifications). */
 export const formatNotificationContent = (text) => {
