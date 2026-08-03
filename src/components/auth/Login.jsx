@@ -38,7 +38,7 @@ const Login = () => {
     setError('');
     setLoading(true);
 
-    const result = await login(email, mot_de_passe);
+    const result = await login(email.trim(), mot_de_passe);
 
     if (result.success) {
       if (rememberMe) {

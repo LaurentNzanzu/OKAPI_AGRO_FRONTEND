@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import authService from '../../services/auth';
 import {
   AuthPage,
@@ -29,41 +29,65 @@ const ForgotPassword = () => {
   const [error, setError] = useState('');
   const [shake, setShake] = useState(false);
   
-  // 👈 Nouveaux états pour le mode dev
+  // États pour le mode développement
   const [devLink, setDevLink] = useState(null);
+  const [resetToken, setResetToken] = useState(null);
   const [countdown, setCountdown] = useState(5);
+  
+  const navigate = useNavigate();
+
+  // Gestion du décompte pour l'affichage du lien de test
+  useEffect(() => {
+    let timer;
+    if (success && countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    } else if (success && countdown === 0 && !devLink && !resetToken) {
+      // Si le décompte est fini mais qu'aucun lien n'est disponible, afficher un message
+      setDevLink(null);
+    }
+    return () => clearTimeout(timer);
+  }, [success, countdown, devLink, resetToken]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    
     try {
       const response = await authService.forgotPassword(email);
       setSuccess(true);
-
-      // 🔍 Pour déboguer : Regardez dans votre console du navigateur ce que renvoie l'API
+      
       console.log("Réponse API forgotPassword :", response);
 
-      // Adaptez selon votre structure Axios (soit response.data, soit response directement)
+      // Récupération du token et du lien de développement
+      const token = response?.data?.reset_token || response?.reset_token;
       const link = response?.data?.dev_reset_link || response?.dev_reset_link;
 
-      if (link) {
-        let timer = 5;
-        const interval = setInterval(() => {
-          timer -= 1;
-          setCountdown(timer);
-          if (timer <= 0) {
-            clearInterval(interval);
-            setDevLink(link);
-          }
-        }, 1000);
+      if (token) {
+        setResetToken(token);
       }
+
+      if (link) {
+        // On conserve le lien pour l'affichage après le décompte
+        setTimeout(() => {
+          setDevLink(link);
+        }, 5000); // 5 secondes
+      }
+      
     } catch (err) {
       setError(err.response?.data?.detail || 'Erreur lors de la demande');
       setShake(true);
       setTimeout(() => setShake(false), 400);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetPassword = () => {
+    if (resetToken) {
+      navigate(`/reset-password?token=${resetToken}`);
+    } else if (devLink) {
+      window.location.href = devLink;
     }
   };
 
@@ -80,24 +104,30 @@ const ForgotPassword = () => {
             Pensez à vérifier vos spams.
           </p>
 
-          {/* 👈 Bloc d'affichage dynamique du lien de développement */}
-          {devLink ? (
+          {/* Bloc d'affichage du lien de test en mode développement */}
+          {countdown > 0 ? (
+            <p className="text-xs text-slate-400 mb-6 italic">
+              Affichage du lien direct de test dans {countdown} secondes...
+            </p>
+          ) : (
             <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-center animate-fade-in">
               <p className="text-xs text-emerald-800 font-semibold mb-2 uppercase tracking-wider">
                 Mode Développement — Accès rapide
               </p>
-              <a 
-                href={devLink} 
-                className="inline-block w-full py-2.5 px-4 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 shadow-sm transition-colors text-center"
-                style={{ textDecoration: 'none' }}
-              >
-                Réinitialiser mon mot de passe maintenant
-              </a>
+              {(devLink || resetToken) ? (
+                <button
+                  onClick={handleResetPassword}
+                  className="inline-block w-full py-2.5 px-4 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 shadow-sm transition-colors text-center"
+                  style={{ textDecoration: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  {resetToken ? '🔑' : '📧'} Réinitialiser mon mot de passe maintenant
+                </button>
+              ) : (
+                <p className="text-sm text-emerald-700 font-medium">
+                  Aucun lien de réinitialisation disponible pour cet email
+                </p>
+              )}
             </div>
-          ) : (
-            <p className="text-xs text-slate-400 mb-6 italic">
-              Affichage du lien direct de test dans {countdown} secondes...
-            </p>
           )}
 
           <Link to="/login" className="af-auth__submit af-auth__submit--outline" style={{ textDecoration: 'none', display: 'inline-flex' }}>
