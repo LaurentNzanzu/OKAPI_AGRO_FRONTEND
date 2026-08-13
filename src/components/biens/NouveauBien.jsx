@@ -496,12 +496,77 @@ const LocalisationModal = ({ isOpen, onClose, onSave, existingNames = [] }) => {
 };
 
 // ============================================================
+// COMPOSANT : ModalAjoutSimple (pour Marque, Modèle, Fabricant, Processeur)
+// ============================================================
+const ModalAjoutSimple = ({ isOpen, title, label, onClose, onSave }) => {
+  const [valeur, setValeur] = useState('');
+  
+  useEffect(() => {
+    if (isOpen) setValeur('');
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = valeur.trim();
+    if (!trimmed) return;
+    onSave(trimmed);
+    setValeur('');
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-surface-dark rounded-xl w-full max-w-md shadow-2xl mx-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center p-4 sm:p-5 border-b border-border-light dark:border-border-dark">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100">{title}</h3>
+          <button className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-night-hover transition-colors" onClick={onClose}>
+            <AppIcon icon={XMarkIcon} size="md" className="text-gray-500 dark:text-slate-400" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{label} <span className="text-danger">*</span></label>
+            <input
+              type="text"
+              value={valeur}
+              onChange={(e) => setValeur(e.target.value)}
+              className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+              placeholder={`Ex: ${label}...`}
+              autoFocus
+            />
+          </div>
+          <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 pt-4 border-t border-border-light dark:border-border-dark">
+            <button type="button" className="px-4 py-2 bg-gray-100 dark:bg-night-muted text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-night-hover rounded-lg transition-colors w-full sm:w-auto" onClick={onClose}>Annuler</button>
+            <button type="submit" className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors w-full sm:w-auto">Ajouter</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
 // COMPOSANT PRINCIPAL : NouveauBien
 // ============================================================
 const NouveauBien = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
+  
+  // Données maîtres (listes pour les selects)
+  const [marques, setMarques] = useState(['Toyota', 'Renault', 'Peugeot', 'Mercedes', 'Volvo', 'Dell', 'HP', 'Lenovo', 'Apple']);
+  const [modeles, setModeles] = useState(['Hilux', 'Clio', '308', 'Sprinter', 'FH', 'Latitude', 'EliteBook', 'ThinkPad', 'MacBook']);
+  const [fabricants, setFabricants] = useState(['Siemens', 'Caterpillar', 'ABB', 'Schneider', 'Bosch', 'Mitsubishi']);
+  const [processeurs, setProcesseurs] = useState(['Intel i3', 'Intel i5', 'Intel i7', 'Intel i9', 'AMD Ryzen 3', 'AMD Ryzen 5', 'AMD Ryzen 7', 'Apple M1', 'Apple M2', 'Apple M3']);
+  
+  // États pour les modales d'ajout
+  const [showAddMarqueModal, setShowAddMarqueModal] = useState(false);
+  const [showAddModeleModal, setShowAddModeleModal] = useState(false);
+  const [showAddFabricantModal, setShowAddFabricantModal] = useState(false);
+  const [showAddProcesseurModal, setShowAddProcesseurModal] = useState(false);
+
   const [formData, setFormData] = useState({
     type_bien: '',
     date_acquisition: new Date().toISOString().split('T')[0],
@@ -512,19 +577,25 @@ const NouveauBien = () => {
     description: '',
     mode_paiement: 'credit',
     fournisseur_id: null,
+    // Véhicule
     marque: '',
     modele: '',
     immatriculation: '',
+    // Machine
     fabricant: '',
     puissance: '',
     prix_base: '',
     unites_totales_prevues: '',
     unites_consommees: '',
     duree_fournisseur: '',
+    // Ordinateur
     processeur: '',
-    ram: '',
-    stockage: '',
+    ram_valeur: '',
+    ram_unite: 'Go',
+    stockage_valeur: '',
+    stockage_unite: 'Go',
   });
+
   const [localisations, setLocalisations] = useState([]);
   const [composants, setComposants] = useState([]);
   const [errors, setErrors] = useState({});
@@ -538,6 +609,20 @@ const NouveauBien = () => {
   const ETAT_OPTIONS = useMemo(() => getEtatOptions(t), [t]);
   const TYPE_OPTIONS = useMemo(() => getTypeBienOptions(t), [t]);
   const isMachineProduction = formData.type_bien === 'machine';
+
+  // Gestionnaire pour l'ajout de nouvelle valeur dans les listes
+  const handleAddMarque = (value) => {
+    if (!marques.includes(value)) setMarques([...marques, value]);
+  };
+  const handleAddModele = (value) => {
+    if (!modeles.includes(value)) setModeles([...modeles, value]);
+  };
+  const handleAddFabricant = (value) => {
+    if (!fabricants.includes(value)) setFabricants([...fabricants, value]);
+  };
+  const handleAddProcesseur = (value) => {
+    if (!processeurs.includes(value)) setProcesseurs([...processeurs, value]);
+  };
 
   useEffect(() => {
     const loadLocalisations = async () => {
@@ -725,8 +810,9 @@ const NouveauBien = () => {
       } else if (formData.type_bien === 'ordinateur') {
         payload.marque = formData.marque;
         payload.processeur = formData.processeur || null;
-        payload.ram = formData.ram || null;
-        payload.stockage = formData.stockage || null;
+        // Concaténer RAM et Stockage avec leur unité
+        payload.ram = formData.ram_valeur ? `${formData.ram_valeur} ${formData.ram_unite}` : null;
+        payload.stockage = formData.stockage_valeur ? `${formData.stockage_valeur} ${formData.stockage_unite}` : null;
       }
       
       const result = await biensService.create(payload);
@@ -741,6 +827,9 @@ const NouveauBien = () => {
     }
   };
 
+  // ============================================================
+  // RENDER : Champs spécifiques par type de bien
+  // ============================================================
   const renderSpecificFields = () => {
     const type = formData.type_bien;
     if (!type) {
@@ -751,70 +840,187 @@ const NouveauBien = () => {
       );
     }
 
+    // ============================================================
+    // TYPE : VÉHICULE
+    // ============================================================
     if (type === 'vehicule') {
       return (
         <div className="space-y-4">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 inline-flex items-center gap-2"><AppIcon icon={TruckIcon} size="md" /> Informations véhicule</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {/* Marque - Select avec bouton + */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Marque <span className="text-danger">*</span></label>
-              <input type="text" value={formData.marque} onChange={(e) => handleChange('marque', e.target.value)} className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.marque ? 'border-danger' : 'border-border-light dark:border-border-dark'}`} placeholder="Ex: Toyota, Renault, Peugeot..." />
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                Marque <span className="text-danger">*</span>
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={formData.marque}
+                  onChange={(e) => handleChange('marque', e.target.value)}
+                  className={`flex-1 px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.marque ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+                >
+                  <option value="">Sélectionnez une marque</option>
+                  {marques.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowAddMarqueModal(true)}
+                  className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center justify-center shrink-0"
+                  title="Ajouter une marque"
+                >
+                  <AppIcon icon={PlusIcon} size="sm" />
+                </button>
+              </div>
               {errors.marque && <span className="text-sm text-danger mt-1">{errors.marque}</span>}
             </div>
+
+            {/* Modèle - Select avec bouton + */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Modèle</label>
-              <input type="text" value={formData.modele} onChange={(e) => handleChange('modele', e.target.value)} className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" placeholder="Ex: Hilux, Clio, 308..." />
+              <div className="flex gap-2">
+                <select
+                  value={formData.modele}
+                  onChange={(e) => handleChange('modele', e.target.value)}
+                  className="flex-1 px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                >
+                  <option value="">Sélectionnez un modèle</option>
+                  {modeles.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModeleModal(true)}
+                  className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center justify-center shrink-0"
+                  title="Ajouter un modèle"
+                >
+                  <AppIcon icon={PlusIcon} size="sm" />
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Immatriculation */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Immatriculation <span className="text-danger">*</span></label>
-            <input type="text" value={formData.immatriculation} onChange={(e) => handleChange('immatriculation', e.target.value)} className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.immatriculation ? 'border-danger' : 'border-border-light dark:border-border-dark'}`} placeholder="Ex: AB-123-CD" />
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+              Immatriculation <span className="text-danger">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.immatriculation}
+              onChange={(e) => handleChange('immatriculation', e.target.value)}
+              className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.immatriculation ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+              placeholder="Ex: AB-123-CD"
+            />
             {errors.immatriculation && <span className="text-sm text-danger mt-1">{errors.immatriculation}</span>}
           </div>
         </div>
       );
     }
 
+    // ============================================================
+    // TYPE : MACHINE DE PRODUCTION
+    // ============================================================
     if (type === 'machine') {
       return (
         <div className="space-y-4">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 inline-flex items-center gap-2"><AppIcon icon={BuildingOffice2Icon} size="md" /> Machine de production</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {/* Fabricant - Select avec bouton + */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Fabricant <span className="text-danger">*</span></label>
-              <input type="text" value={formData.fabricant} onChange={(e) => handleChange('fabricant', e.target.value)} className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.fabricant ? 'border-danger' : 'border-border-light dark:border-border-dark'}`} placeholder="Ex: Siemens, Caterpillar, ABB..." />
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                Fabricant <span className="text-danger">*</span>
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={formData.fabricant}
+                  onChange={(e) => handleChange('fabricant', e.target.value)}
+                  className={`flex-1 px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.fabricant ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+                >
+                  <option value="">Sélectionnez un fabricant</option>
+                  {fabricants.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowAddFabricantModal(true)}
+                  className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center justify-center shrink-0"
+                  title="Ajouter un fabricant"
+                >
+                  <AppIcon icon={PlusIcon} size="sm" />
+                </button>
+              </div>
               {errors.fabricant && <span className="text-sm text-danger mt-1">{errors.fabricant}</span>}
             </div>
+
+            {/* Puissance */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Puissance (kW/CV)</label>
-              <input type="number" value={formData.puissance} onChange={(e) => handleChange('puissance', e.target.value)} className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" placeholder="Ex: 150" />
+              <input
+                type="number"
+                value={formData.puissance}
+                onChange={(e) => handleChange('puissance', e.target.value)}
+                className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                placeholder="Ex: 150"
+              />
             </div>
           </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Unités totales prévues</label>
-              <input type="number" value={formData.unites_totales_prevues} onChange={(e) => handleChange('unites_totales_prevues', e.target.value)} className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" placeholder="Ex: 100000" />
+              <input
+                type="number"
+                value={formData.unites_totales_prevues}
+                onChange={(e) => handleChange('unites_totales_prevues', e.target.value)}
+                className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                placeholder="Ex: 100000"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Unités consommées</label>
-              <input type="number" value={formData.unites_consommees} onChange={(e) => handleChange('unites_consommees', e.target.value)} className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" placeholder="Ex: 0" />
+              <input
+                type="number"
+                value={formData.unites_consommees}
+                onChange={(e) => handleChange('unites_consommees', e.target.value)}
+                className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                placeholder="Ex: 0"
+              />
             </div>
           </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Durée fournisseur (jours)</label>
-              <input type="number" value={formData.duree_fournisseur} onChange={(e) => handleChange('duree_fournisseur', e.target.value)} className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" placeholder="Ex: 7800" />
+              <input
+                type="number"
+                value={formData.duree_fournisseur}
+                onChange={(e) => handleChange('duree_fournisseur', e.target.value)}
+                className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                placeholder="Ex: 7800"
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Prix de base machine (USD) <span className="text-danger">*</span></label>
-              <input type="number" value={formData.prix_base} onChange={(e) => handleChange('prix_base', e.target.value)} className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.prix_base ? 'border-danger' : 'border-border-light dark:border-border-dark'}`} placeholder="Prix de base hors composants" />
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                Prix de base machine (USD) <span className="text-danger">*</span>
+              </label>
+              <input
+                type="number"
+                value={formData.prix_base}
+                onChange={(e) => handleChange('prix_base', e.target.value)}
+                className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.prix_base ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+                placeholder="Prix de base hors composants"
+              />
               {errors.prix_base && <span className="text-sm text-danger mt-1">{errors.prix_base}</span>}
             </div>
           </div>
+
+          {/* Composants */}
           <div className="mt-6 pt-4 border-t border-border-light dark:border-border-dark">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
               <h4 className="font-medium text-gray-900 dark:text-slate-100 text-sm sm:text-base">Composants</h4>
-              <button type="button" className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg transition-colors w-full sm:w-auto" onClick={() => setComposants(prev => [...prev, { numero_serie: '', prix_achat: '', designation: '' }])}>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg transition-colors w-full sm:w-auto"
+                onClick={() => setComposants(prev => [...prev, { numero_serie: '', prix_achat: '', designation: '' }])}
+              >
                 <AppIcon icon={PlusIcon} size="xs" /> Ajouter
               </button>
             </div>
@@ -822,18 +1028,40 @@ const NouveauBien = () => {
               <div key={index} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 p-3 bg-gray-50 dark:bg-night-active rounded-lg mb-2 items-end">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-0.5">Désignation</label>
-                  <input type="text" value={comp.designation} onChange={(e) => { const updated = [...composants]; updated[index] = { ...updated[index], designation: e.target.value }; setComposants(updated); }} className="w-full px-2 sm:px-3 py-1.5 text-sm border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" placeholder="Ex: Moteur principal" />
+                  <input
+                    type="text"
+                    value={comp.designation}
+                    onChange={(e) => { const updated = [...composants]; updated[index] = { ...updated[index], designation: e.target.value }; setComposants(updated); }}
+                    className="w-full px-2 sm:px-3 py-1.5 text-sm border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                    placeholder="Ex: Moteur principal"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-0.5">N° de série *</label>
-                  <input type="text" value={comp.numero_serie} onChange={(e) => { const updated = [...composants]; updated[index] = { ...updated[index], numero_serie: e.target.value }; setComposants(updated); }} className="w-full px-2 sm:px-3 py-1.5 text-sm border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" placeholder="Ex: MOT-99823-A" />
+                  <input
+                    type="text"
+                    value={comp.numero_serie}
+                    onChange={(e) => { const updated = [...composants]; updated[index] = { ...updated[index], numero_serie: e.target.value }; setComposants(updated); }}
+                    className="w-full px-2 sm:px-3 py-1.5 text-sm border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                    placeholder="Ex: MOT-99823-A"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-0.5">Prix d'achat *</label>
-                  <input type="number" value={comp.prix_achat} onChange={(e) => { const updated = [...composants]; updated[index] = { ...updated[index], prix_achat: e.target.value }; setComposants(updated); }} className="w-full px-2 sm:px-3 py-1.5 text-sm border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" placeholder="Ex: 1500" />
+                  <input
+                    type="number"
+                    value={comp.prix_achat}
+                    onChange={(e) => { const updated = [...composants]; updated[index] = { ...updated[index], prix_achat: e.target.value }; setComposants(updated); }}
+                    className="w-full px-2 sm:px-3 py-1.5 text-sm border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                    placeholder="Ex: 1500"
+                  />
                 </div>
                 <div className="flex justify-end sm:justify-end lg:justify-end">
-                  <button type="button" onClick={() => setComposants(prev => prev.filter((_, i) => i !== index))} className="px-2.5 py-1.5 bg-red-100 text-danger hover:bg-red-200 rounded-lg transition-colors flex items-center gap-1 text-sm w-full sm:w-auto justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setComposants(prev => prev.filter((_, i) => i !== index))}
+                    className="px-2.5 py-1.5 bg-red-100 text-danger hover:bg-red-200 rounded-lg transition-colors flex items-center gap-1 text-sm w-full sm:w-auto justify-center"
+                  >
                     <AppIcon icon={TrashIcon} size="sm" /> Supprimer
                   </button>
                 </div>
@@ -844,29 +1072,143 @@ const NouveauBien = () => {
       );
     }
 
+    // ============================================================
+    // TYPE : ORDINATEUR
+    // ============================================================
     if (type === 'ordinateur') {
       return (
         <div className="space-y-4">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 inline-flex items-center gap-2"><AppIcon icon={ComputerDesktopIcon} size="md" /> Informations ordinateur</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {/* Marque - Select avec bouton + */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Marque <span className="text-danger">*</span></label>
-              <input type="text" value={formData.marque} onChange={(e) => handleChange('marque', e.target.value)} className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.marque ? 'border-danger' : 'border-border-light dark:border-border-dark'}`} placeholder="Ex: Dell, HP, Lenovo..." />
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                Marque <span className="text-danger">*</span>
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={formData.marque}
+                  onChange={(e) => handleChange('marque', e.target.value)}
+                  className={`flex-1 px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.marque ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+                >
+                  <option value="">Sélectionnez une marque</option>
+                  {marques.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowAddMarqueModal(true)}
+                  className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center justify-center shrink-0"
+                  title="Ajouter une marque"
+                >
+                  <AppIcon icon={PlusIcon} size="sm" />
+                </button>
+              </div>
               {errors.marque && <span className="text-sm text-danger mt-1">{errors.marque}</span>}
             </div>
+
+            {/* Processeur - Select avec bouton + */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Processeur</label>
-              <input type="text" value={formData.processeur} onChange={(e) => handleChange('processeur', e.target.value)} className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" placeholder="Ex: Intel i7, AMD Ryzen 5..." />
+              <div className="flex gap-2">
+                <select
+                  value={formData.processeur}
+                  onChange={(e) => handleChange('processeur', e.target.value)}
+                  className="flex-1 px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                >
+                  <option value="">Sélectionnez un processeur</option>
+                  {processeurs.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowAddProcesseurModal(true)}
+                  className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center justify-center shrink-0"
+                  title="Ajouter un processeur"
+                >
+                  <AppIcon icon={PlusIcon} size="sm" />
+                </button>
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">RAM</label>
-              <input type="text" value={formData.ram} onChange={(e) => handleChange('ram', e.target.value)} className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" placeholder="Ex: 16 Go DDR4" />
+
+          {/* RAM */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">RAM</label>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="number"
+                value={formData.ram_valeur}
+                onChange={(e) => handleChange('ram_valeur', e.target.value)}
+                placeholder="Ex: 16"
+                className="w-24 sm:w-32 px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+              />
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
+                  <input
+                    type="radio"
+                    name="ram_unite"
+                    value="Go"
+                    checked={formData.ram_unite === 'Go'}
+                    onChange={(e) => handleChange('ram_unite', e.target.value)}
+                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                  /> Go
+                </label>
+                <label className="flex items-center gap-1 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
+                  <input
+                    type="radio"
+                    name="ram_unite"
+                    value="Mo"
+                    checked={formData.ram_unite === 'Mo'}
+                    onChange={(e) => handleChange('ram_unite', e.target.value)}
+                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                  /> Mo
+                </label>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Stockage</label>
-              <input type="text" value={formData.stockage} onChange={(e) => handleChange('stockage', e.target.value)} className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" placeholder="Ex: 512 Go SSD" />
+          </div>
+
+          {/* Stockage */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Stockage</label>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="number"
+                value={formData.stockage_valeur}
+                onChange={(e) => handleChange('stockage_valeur', e.target.value)}
+                placeholder="Ex: 512"
+                className="w-24 sm:w-32 px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+              />
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
+                  <input
+                    type="radio"
+                    name="stockage_unite"
+                    value="Go"
+                    checked={formData.stockage_unite === 'Go'}
+                    onChange={(e) => handleChange('stockage_unite', e.target.value)}
+                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                  /> Go
+                </label>
+                <label className="flex items-center gap-1 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
+                  <input
+                    type="radio"
+                    name="stockage_unite"
+                    value="Mo"
+                    checked={formData.stockage_unite === 'Mo'}
+                    onChange={(e) => handleChange('stockage_unite', e.target.value)}
+                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                  /> Mo
+                </label>
+                <label className="flex items-center gap-1 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
+                  <input
+                    type="radio"
+                    name="stockage_unite"
+                    value="TB"
+                    checked={formData.stockage_unite === 'TB'}
+                    onChange={(e) => handleChange('stockage_unite', e.target.value)}
+                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                  /> TB
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -880,10 +1222,17 @@ const NouveauBien = () => {
     );
   };
 
+  // ============================================================
+  // RENDER : Confirmation
+  // ============================================================
   const renderConfirmation = () => {
     const compteCredit = formData.mode_paiement === 'credit' ? '481' : '512';
     const compteDebit = { vehicule: '2445', machine: '2441', ordinateur: '2443' }[formData.type_bien] || '2440';
     const localisationNom = localisations.find(l => String(l.id_localisation) === String(formData.id_localisation))?.nom_localisation || '—';
+
+    // Formater RAM et Stockage pour l'affichage
+    const ramDisplay = formData.ram_valeur ? `${formData.ram_valeur} ${formData.ram_unite}` : '—';
+    const stockageDisplay = formData.stockage_valeur ? `${formData.stockage_valeur} ${formData.stockage_unite}` : '—';
 
     return (
       <div className="space-y-4">
@@ -896,10 +1245,35 @@ const NouveauBien = () => {
           <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Localisation :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{localisationNom}</span></div>
           <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Mode de paiement :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.mode_paiement === 'credit' ? 'Crédit' : 'Comptant'}</span></div>
           {formData.fournisseur_id && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Fournisseur :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">ID #{formData.fournisseur_id}</span></div>}
-          {formData.marque && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Marque :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.marque}</span></div>}
-          {formData.immatriculation && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Immatriculation :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.immatriculation}</span></div>}
+          
+          {/* Afficher les champs spécifiques selon le type */}
+          {formData.type_bien === 'vehicule' && (
+            <>
+              {formData.marque && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Marque :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.marque}</span></div>}
+              {formData.modele && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Modèle :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.modele}</span></div>}
+              {formData.immatriculation && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Immatriculation :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.immatriculation}</span></div>}
+            </>
+          )}
+          
+          {formData.type_bien === 'machine' && (
+            <>
+              {formData.fabricant && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Fabricant :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.fabricant}</span></div>}
+              {formData.puissance && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Puissance :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.puissance} kW</span></div>}
+              {composants.length > 0 && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Composants :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{composants.length} composant(s)</span></div>}
+            </>
+          )}
+          
+          {formData.type_bien === 'ordinateur' && (
+            <>
+              {formData.marque && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Marque :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.marque}</span></div>}
+              {formData.processeur && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Processeur :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.processeur}</span></div>}
+              {formData.ram_valeur && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">RAM :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{ramDisplay}</span></div>}
+              {formData.stockage_valeur && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Stockage :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{stockageDisplay}</span></div>}
+            </>
+          )}
+
           {formData.description && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Désignation :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.description}</span></div>}
-          {composants.length > 0 && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Composants :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{composants.length} composant(s)</span></div>}
+          
           <div className="pt-4 mt-2 border-t-2 border-primary-200 dark:border-primary-800">
             <div className="text-sm font-semibold text-primary-700 dark:text-primary-300 mb-2">📊 Écriture comptable générée</div>
             <div className="flex flex-col sm:flex-row justify-between py-1 text-sm"><span className="text-gray-600 dark:text-slate-400">Débit :</span><span className="font-medium text-gray-900 dark:text-slate-100">{compteDebit} (Immobilisation)</span></div>
@@ -935,6 +1309,7 @@ const NouveauBien = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+      {/* Header */}
       <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
         <button className="p-2 hover:bg-gray-100 dark:hover:bg-night-hover rounded-lg transition-colors" onClick={() => navigate('/biens')}>
           <AppIcon icon={ArrowLeftIcon} size="md" className="text-gray-600 dark:text-slate-400" />
@@ -944,7 +1319,7 @@ const NouveauBien = () => {
         </h1>
       </div>
 
-      {/* Stepper - Responsive */}
+      {/* Stepper */}
       <div className="flex justify-between mb-4 sm:mb-6 bg-white dark:bg-surface-dark rounded-xl p-3 sm:p-4 shadow-card overflow-x-auto">
         {steps.map((label, index) => (
           <div key={index} className="flex-1 text-center relative min-w-[60px] sm:min-w-[80px]">
@@ -959,6 +1334,7 @@ const NouveauBien = () => {
         ))}
       </div>
 
+      {/* Formulaire */}
       <div className="bg-white dark:bg-surface-dark rounded-xl p-4 sm:p-6 shadow-card">
         {submitError && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-danger text-danger rounded text-sm">
@@ -969,6 +1345,7 @@ const NouveauBien = () => {
           </div>
         )}
 
+        {/* Étape 0 - Informations générales */}
         {activeStep === 0 && (
           <div className="space-y-3 sm:space-y-4">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100">📋 Informations d'acquisition</h3>
@@ -1039,9 +1416,13 @@ const NouveauBien = () => {
           </div>
         )}
 
+        {/* Étape 1 - Champs spécifiques */}
         {activeStep === 1 && renderSpecificFields()}
+
+        {/* Étape 2 - Confirmation */}
         {activeStep === 2 && renderConfirmation()}
 
+        {/* Boutons de navigation */}
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-6 pt-4 border-t border-border-light dark:border-border-dark">
           <button className="px-4 py-2 bg-gray-100 dark:bg-night-muted text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-night-hover rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto order-2 sm:order-1" onClick={handleBack} disabled={activeStep === 0}>
             ← Retour
@@ -1063,7 +1444,38 @@ const NouveauBien = () => {
         </div>
       </div>
 
+      {/* Modales */}
       <LocalisationModal isOpen={showLocalisationModal} onClose={() => setShowLocalisationModal(false)} onSave={handleCreateLocalisation} existingNames={localisations.map(loc => loc.nom_localisation)} />
+      
+      <ModalAjoutSimple
+        isOpen={showAddMarqueModal}
+        title="Ajouter une marque"
+        label="Nom de la marque"
+        onClose={() => setShowAddMarqueModal(false)}
+        onSave={handleAddMarque}
+      />
+      <ModalAjoutSimple
+        isOpen={showAddModeleModal}
+        title="Ajouter un modèle"
+        label="Nom du modèle"
+        onClose={() => setShowAddModeleModal(false)}
+        onSave={handleAddModele}
+      />
+      <ModalAjoutSimple
+        isOpen={showAddFabricantModal}
+        title="Ajouter un fabricant"
+        label="Nom du fabricant"
+        onClose={() => setShowAddFabricantModal(false)}
+        onSave={handleAddFabricant}
+      />
+      <ModalAjoutSimple
+        isOpen={showAddProcesseurModal}
+        title="Ajouter un processeur"
+        label="Nom du processeur"
+        onClose={() => setShowAddProcesseurModal(false)}
+        onSave={handleAddProcesseur}
+      />
+
       {showSuccessDialog && <SuccessDialog />}
     </div>
   );
