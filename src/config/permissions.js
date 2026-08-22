@@ -382,3 +382,32 @@ export function resolveRoutePermission(pathname) {
   }
   return null;
 }
+
+// ===== FONCTIONS AJOUTÉES POUR LA COMPATIBILITÉ AVEC LA NOUVELLE ARCHITECTURE =====
+
+/**
+ * Vérifie si l'utilisateur a une permission spécifique (alias pour userHasPermission)
+ */
+export const hasPermission = userHasPermission;
+
+/**
+ * Vérifie si l'utilisateur a un rôle spécifique
+ */
+export const hasRole = (user, role) => {
+  if (!user || !role) return false;
+  const userRoles = (user.roles || []).map(r => String(r).trim().toUpperCase());
+  const normalizedRole = String(role).trim().toUpperCase();
+  if (userRoles.includes('ADMIN')) return true;
+  return userRoles.includes(normalizedRole);
+};
+
+/**
+ * Vérifie si l'utilisateur a au moins un des rôles spécifiés
+ */
+export const hasAnyRole = (user, roles) => {
+  if (!user || !roles || roles.length === 0) return false;
+  const userRoles = (user.roles || []).map(r => String(r).trim().toUpperCase());
+  if (userRoles.includes('ADMIN')) return true;
+  const normalizedRoles = roles.map(r => String(r).trim().toUpperCase());
+  return normalizedRoles.some(role => userRoles.includes(role));
+};

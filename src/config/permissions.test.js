@@ -10,6 +10,8 @@ const technicien = { roles: ['TECHNICIEN'], permissions: [] };
 const gestionnaire = { roles: ['GESTIONNAIRE'], permissions: [] };
 const magasinier = { roles: ['MAGASINIER'], permissions: [] };
 const comptable = { roles: ['COMPTABLE'], permissions: [] };
+const admin = { roles: ['ADMIN'], permissions: [] };
+const dg = { roles: ['DG'], permissions: [] };
 
 describe('permissions biens — matrice TECHNICIEN', () => {
   it('technicien peut voir la liste des biens', () => {
