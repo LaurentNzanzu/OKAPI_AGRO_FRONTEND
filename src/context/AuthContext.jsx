@@ -24,41 +24,87 @@ export const AuthProvider = ({ children }) => {
     const initializeAuth = async () => {
       setLoading(true);
       try {
-        // Vérifier si un token existe en sessionStorage
+        // 🔍 LOG DE DÉBOGAGE (optionnel)
+        if (import.meta.env.DEV) {
+          console.log('[Auth] Initialisation...');
+        }
+
         const token = authService.getAccessToken();
         const sessionUuid = authService.getSessionUuid();
-        
-        if (token && !authService.isTokenExpired()) {
-          // Récupérer les informations de l'utilisateur
+
+        // ============================================================
+        // 🔴 CORRECTION : Gérer le cas où le token est expiré
+        // ============================================================
+
+        // CAS 1 : Token présent mais expiré → Tentative de refresh
+        if (token && authService.isTokenExpired()) {
+          if (import.meta.env.DEV) {
+            console.warn('[Auth] Token expiré, tentative de refresh...');
+          }
+
+          try {
+            // Tentative de refresh automatique
+            const refreshResult = await authService.refreshToken();
+
+            if (refreshResult.success) {
+              if (import.meta.env.DEV) {
+                console.log('[Auth] Refresh réussi !');
+              }
+
+              // Récupérer l'utilisateur avec le nouveau token
+              const userResult = await authService.getCurrentUser();
+              if (userResult.success) {
+                setUser(userResult.data);
+                setIsAuthenticated(true);
+                setAuthReady(true);
+              } else {
+                throw new Error('Échec récupération utilisateur après refresh');
+              }
+            } else {
+              // Refresh échoué → déconnecter
+              if (import.meta.env.DEV) {
+                console.warn('[Auth] Refresh échoué, déconnexion...');
+              }
+              authService.clearTokens();
+              setIsAuthenticated(false);
+              setAuthReady(true);
+              window.location.href = '/login';
+              return;
+            }
+          } catch (refreshError) {
+            // Erreur lors du refresh
+            console.error('[Auth] Erreur refresh:', refreshError);
+            authService.clearTokens();
+            setIsAuthenticated(false);
+            setAuthReady(true);
+            window.location.href = '/login';
+            return;
+          }
+        }
+        // CAS 2 : Token présent et valide → Récupération normale
+        else if (token && !authService.isTokenExpired()) {
+          if (import.meta.env.DEV) {
+            console.log('[Auth] Token valide, récupération utilisateur...');
+          }
+
           const result = await authService.getCurrentUser();
           if (result.success) {
             setUser(result.data);
             setIsAuthenticated(true);
             setAuthReady(true);
           } else {
-            // Token invalide, nettoyer
+            // Token invalide malgré tout
             authService.clearTokens();
             setIsAuthenticated(false);
             setAuthReady(true);
           }
-        } else if (token && authService.isTokenExpired()) {
-          // Token expiré, tenter de restaurer la session
-          const restoreResult = await authService.restoreSession();
-          if (restoreResult.success) {
-            const userResult = await authService.getCurrentUser();
-            if (userResult.success) {
-              setUser(userResult.data);
-              setIsAuthenticated(true);
-              setAuthReady(true);
-            }
-          } else {
-            authService.clearTokens();
-            setIsAuthenticated(false);
-            setAuthReady(true);
+        }
+        // CAS 3 : Pas de token en sessionStorage → Vérifier cookie Refresh Token
+        else {
+          if (import.meta.env.DEV) {
+            console.log('[Auth] Pas de token, vérification cookie...');
           }
-        } else {
-          // Pas de token en sessionStorage
-          // Vérifier si on a un cookie Refresh Token (via /me)
+
           try {
             const userResult = await authService.getCurrentUser();
             if (userResult.success) {
@@ -69,13 +115,14 @@ export const AuthProvider = ({ children }) => {
               setIsAuthenticated(false);
               setAuthReady(true);
             }
-          } catch {
+          } catch (error) {
+            console.warn('[Auth] Pas de session active, redirection vers login');
             setIsAuthenticated(false);
             setAuthReady(true);
           }
         }
       } catch (error) {
-        console.error('Erreur d\'initialisation de l\'authentification:', error);
+        console.error('[Auth] Erreur d\'initialisation:', error);
         authService.clearTokens();
         setIsAuthenticated(false);
         setAuthReady(true);
@@ -91,13 +138,13 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback(async (email, password) => {
     try {
       const result = await authService.login(email, password);
-      
+
       if (result.success) {
         setUser(result.data.user);
         setIsAuthenticated(true);
         return { success: true, data: result.data };
       }
-      
+
       return { success: false, error: result.error };
     } catch (error) {
       return {

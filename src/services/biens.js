@@ -10,13 +10,13 @@ export const biensService = {
    */
   getAll: async (params = {}) => {
     const { page = 1, limit = 10, skip, type_bien, etat, search, disponible_maintenance } = params;
-    
+
     // 🛡️ Sécurité : On s'assure que la limite demandée ne dépasse jamais la contrainte API de 500
     const safeLimit = Math.min(Number(limit), 500);
-    
+
     // Calcul du décalage (skip) basé sur la limite sécurisée
     const skipVal = skip !== undefined ? skip : (page - 1) * safeLimit;
-    
+
     const queryParams = new URLSearchParams({
       skip: String(skipVal),
       limit: String(safeLimit),
@@ -30,6 +30,15 @@ export const biensService = {
     return response.data;
   },
 
+  /**
+   * Crée un bien avec upload d'images (multipart/form-data)
+   */
+  createWithImages: async (formData) => {
+    const response = await api.post('/biens/with-images', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
   /**
    * Récupère un bien par son ID avec option de contexte panne
    */
@@ -115,10 +124,10 @@ export const biensService = {
     // Utiliser l'endpoint de concertation pour vérifier l'éligibilité
     const response = await api.get(`/concertations/bien/${bienId}/eligibilite/cession`);
     const cession = response.data;
-    
+
     const responseRebut = await api.get(`/concertations/bien/${bienId}/eligibilite/rebut`);
     const rebut = responseRebut.data;
-    
+
     return {
       cession: {
         eligible: cession.eligible || false,
@@ -208,7 +217,7 @@ export const biensService = {
    * @param {string} typeValidation - Type de validation (CESSION ou REBUT) - Optionnel
    */
   getConcertations: async (bienId, typeValidation = null) => {
-    const url = typeValidation 
+    const url = typeValidation
       ? `/concertations/bien/${bienId}?type_validation=${typeValidation}`
       : `/concertations/bien/${bienId}`;
     const response = await api.get(url);

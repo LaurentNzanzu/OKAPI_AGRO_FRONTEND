@@ -147,14 +147,30 @@ const FicheBien = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const panneId = searchParams.get('panne_id');
-    const { canCreateMouvementType, hasRole, user } = useAuth();
+    
+    // ============================================================
+    // 🔴 CORRECTION : Séparer les hooks correctement
+    // ============================================================
+    const { hasRole, user } = useAuth();
     const {
         canEditBien,
         canDeleteBien,
         canViewPurchasePrice,
         isTechnicianMode,
         isTechnicien,
+        hasPermission,  // ✅ Ajout de hasPermission
     } = usePermissions();
+    
+    // ✅ Fonction locale pour remplacer canCreateMouvementType
+    const canCreateMouvementType = (type) => {
+        // Les administrateurs, DG et comptables ont tous les droits
+        if (hasRole('ADMIN') || hasRole('COMPTABLE') || hasRole('DG')) {
+            return true;
+        }
+        // Vérifier la permission spécifique
+        return hasPermission('MOUVEMENT_CREATE') || hasPermission('MOUVEMENT.*');
+    };
+    
     const { fetchBienForContext } = useBienAccess();
 
     const [bien, setBien] = useState(null);
