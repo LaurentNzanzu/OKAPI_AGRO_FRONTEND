@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from '../../context/LanguageContext';
 import { getEtatOptions, getNouveauBienSteps } from '../../utils/i18nBiens';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios'; // Import ajouté pour Cloudinary
 import ImageUpload from '../common/ImageUpload';
 import ConfigInventaireModal from './ConfigInventaireModal';
 import { biensService } from '../../services/biens';
@@ -29,6 +30,15 @@ import {
   PencilSquareIcon,
   CubeIcon,
 } from '../ui/icons';
+
+// ============================================================
+// CONFIGURATION CLOUDINARY (UPLOAD DIRECT)
+// ============================================================
+// Remplacez ces valeurs par les vôtres
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME; 
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET; // Ex: 'my_app_preset'
+
+const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 
 // ============================================================
 // COMPOSANT : TypeBienSelector
@@ -1188,6 +1198,34 @@ const NouveauBien = () => {
   const [dynamicFields, setDynamicFields] = useState([]);
 
   // ============================================================
+  // FONCTION : UPLOAD VERS CLOUDINARY
+  // ============================================================
+  const uploadImageToCloudinary = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
+
+    try {
+      const response = await axios.post(CLOUDINARY_URL, formData, {
+        onUploadProgress: (progressEvent) => {
+          // Ici vous pourriez gérer une barre de progression par image si nécessaire
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          // console.log(`Upload progression: ${percentCompleted}%`);
+        }
+      });
+
+      // On retourne uniquement les données nécessaires pour le backend
+      return {
+        url: response.data.secure_url,
+        public_id: response.data.public_id,
+      };
+    } catch (error) {
+      console.error("Erreur upload Cloudinary:", error);
+      throw new Error("Erreur lors de l'upload de l'image");
+    }
+  };
+
+  // ============================================================
   // CHARGEMENT DES DONNÉES INITIALES
   // ============================================================
   useEffect(() => {
@@ -1424,12 +1462,18 @@ const NouveauBien = () => {
   };
 
   // ============================================================
-  // SOUMISSION DU FORMULAIRE (MODIFIÉE)
+  // SOUMISSION DU FORMULAIRE (NOUVELLE VERSION AVEC CLOUDINARY)
   // ============================================================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Valider toutes les étapes avant soumission
+    // 1. Validation de base : vérifier qu'au moins une image est sélectionnée
+    if (!imagesFiles || imagesFiles.length === 0) {
+      setError('Veuillez ajouter au moins une image.');
+      return;
+    }
+
+    // 2. Valider toutes les étapes avant soumission
     const valid1 = validateStep1();
     const valid2 = validateStep2();
     const valid3 = validateStep3();
@@ -1446,28 +1490,29 @@ const NouveauBien = () => {
     setError(null);
 
     try {
-      // Construction du FormData
-      const fd = new FormData();
-      fd.append('libelle', formData.libelle);
-      fd.append('id_type_bien', formData.id_type_bien);
-      fd.append('date_acquisition', formData.date_acquisition);
-      fd.append('prix_acquisition', formData.prix_acquisition);
-      fd.append('etat', formData.etat);
-      fd.append('id_localisation', formData.id_localisation);
-      fd.append('mode_paiement', formData.mode_paiement);
-      if (formData.fournisseur_id) fd.append('fournisseur_id', formData.fournisseur_id);
-      if (formData.numero_serie?.trim()) fd.append('numero_serie', formData.numero_serie.trim());
-      if (formData.numero_inventaire?.trim()) fd.append('numero_inventaire', formData.numero_inventaire.trim());
-      if (formData.attributs_specifiques && Object.keys(formData.attributs_specifiques).length > 0) {
-        fd.append('attributs_specifiques', JSON.stringify(formData.attributs_specifiques));
-      }
+      // 3. Upload des images vers Cloudinary
+      const uploadedImagesData = await Promise.all(
+        imagesFiles.map(file => uploadImageToCloudinary(file))
+      );
 
-      // Ajouter les fichiers images
-      for (const file of imagesFiles) {
-        fd.append('images', file);
-      }
+      // 4. Préparer les données du bien
+      const bienData = {
+        libelle: formData.libelle,
+        id_type_bien: formData.id_type_bien,
+        date_acquisition: formData.date_acquisition,
+        prix_acquisition: parseFloat(formData.prix_acquisition),
+        etat: formData.etat,
+        id_localisation: formData.id_localisation,
+        mode_paiement: formData.mode_paiement,
+        fournisseur_id: formData.fournisseur_id ? parseInt(formData.fournisseur_id) : null,
+        numero_serie: formData.numero_serie?.trim() || null,
+        numero_inventaire: formData.numero_inventaire?.trim() || null,
+        attributs_specifiques: formData.attributs_specifiques || {},
+        images: uploadedImagesData, // tableau d'objets {url, public_id}
+      };
 
-      const result = await biensService.createWithImages(fd);
+      // 5. Envoi vers l'API backend (en JSON)
+      const result = await biensService.createWithImages(bienData);
 
       // Rediriger vers la page du bien créé
       navigate(`/biens/${result.id_bien}`);
