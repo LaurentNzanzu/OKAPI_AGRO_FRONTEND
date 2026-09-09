@@ -27,21 +27,23 @@ export const localisationsService = {
     }
     
     const response = await api.get(`${BASE_URL}?${queryParams}`);
-    
-    // ✅ CORRECTION : Extraire le tableau de l'objet paginé
-    // Supposons que l'API retourne : { total, page, page_size, localisations: [...] }
-    // ou directement un tableau
     const data = response.data;
     
-    // Si c'est un tableau, le retourner directement
+    // L'API retourne { total, localisations: [...] }
+    // On retourne TOUJOURS un tableau pour simplifier l'usage côté composants
     if (Array.isArray(data)) {
       return data;
     }
-    
-    // Si c'est un objet paginé, extraire la propriété contenant le tableau
-    // Les noms possibles : localisations, items, data, results
-    const items = data?.localisations || data?.items || data?.data || data?.results || [];
-    return items;
+    if (data?.localisations && Array.isArray(data.localisations)) {
+      return data.localisations;
+    }
+    // Fallback : autres noms de propriétés possibles
+    const items = data?.items || data?.data || data?.results;
+    if (Array.isArray(items)) {
+      return items;
+    }
+    console.warn('[localisationsService.getAll] Structure API inattendue :', data);
+    return [];
   },
 
   /**

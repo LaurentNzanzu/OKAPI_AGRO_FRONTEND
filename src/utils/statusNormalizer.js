@@ -13,6 +13,7 @@ export const ETAT_API_VALUES = Object.freeze([
   'PANNE',
   'REFORME',
   'MAINTENANCE',
+  'EN_TEST',   // ← présent dans EtatBienEnum Python, doit être géré ici
 ]);
 
 const SELECT_VALUES = new Set(

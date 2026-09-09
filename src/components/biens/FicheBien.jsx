@@ -14,7 +14,7 @@ import {
     ArrowBack, Edit, Delete, QrCode, History, Warning,
     CheckCircle, Build, AccountBalance, CalendarToday,
     LocationOn, AttachMoney, Info, PieChart, DirectionsCar,
-    Print, Calculate, Visibility, Forum
+    Print, Calculate, Visibility, Forum, Close
 } from '@mui/icons-material';
 import { biensService } from '../../services/biens';
 import { useAuth } from '../../hooks/useAuth';
@@ -40,6 +40,110 @@ import api from '../../services/api';
 
 const hasValidValue = (value) => {
     return value !== null && value !== undefined && value !== '' && value !== '-';
+};
+
+// ============================================================
+// COMPOSANT : Affichage des images du bien
+// ============================================================
+const BienImages = ({ images }) => {
+    const { t } = useTranslation();
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [openDialog, setOpenDialog] = useState(false);
+
+    if (!images || images.length === 0) {
+        return (
+            <Box sx={{ textAlign: 'center', py: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                    {t('assets.noImages') || 'Aucune photo disponible'}
+                </Typography>
+            </Box>
+        );
+    }
+
+    const handleImageClick = (image) => {
+        setSelectedImage(image);
+        setOpenDialog(true);
+    };
+
+    const handleCloseDialog = () => {
+        setOpenDialog(false);
+        setSelectedImage(null);
+    };
+
+    return (
+        <>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                {images.map((img, index) => (
+                    <Box
+                        key={index}
+                        sx={{
+                            width: 100,
+                            height: 100,
+                            borderRadius: 1,
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            '&:hover': {
+                                borderColor: 'primary.main',
+                                boxShadow: 1,
+                            }
+                        }}
+                        onClick={() => handleImageClick(img)}
+                    >
+                        <img
+                            src={img.url}
+                            alt={`Photo ${index + 1}`}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                            }}
+                            loading="lazy"
+                        />
+                    </Box>
+                ))}
+            </Box>
+
+            {/* Dialog pour afficher l'image en grand */}
+            <Dialog
+                open={openDialog}
+                onClose={handleCloseDialog}
+                maxWidth="md"
+                fullWidth
+            >
+                <DialogContent sx={{ p: 0, position: 'relative', bgcolor: 'black' }}>
+                    <IconButton
+                        sx={{
+                            position: 'absolute',
+                            right: 8,
+                            top: 8,
+                            bgcolor: 'rgba(0,0,0,0.5)',
+                            color: 'white',
+                            '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
+                            zIndex: 1,
+                        }}
+                        onClick={handleCloseDialog}
+                    >
+                        <Close />
+                    </IconButton>
+                    {selectedImage && (
+                        <img
+                            src={selectedImage.url}
+                            alt="Agrandissement"
+                            style={{
+                                width: '100%',
+                                height: 'auto',
+                                maxHeight: '80vh',
+                                objectFit: 'contain',
+                                display: 'block',
+                            }}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
+        </>
+    );
 };
 
 const CessionEligibilitySection = ({ bienId, onCessionClick }) => {
@@ -148,9 +252,6 @@ const FicheBien = () => {
     const [searchParams] = useSearchParams();
     const panneId = searchParams.get('panne_id');
     
-    // ============================================================
-    // 🔴 CORRECTION : Séparer les hooks correctement
-    // ============================================================
     const { hasRole, user } = useAuth();
     const {
         canEditBien,
@@ -158,16 +259,13 @@ const FicheBien = () => {
         canViewPurchasePrice,
         isTechnicianMode,
         isTechnicien,
-        hasPermission,  // ✅ Ajout de hasPermission
+        hasPermission,
     } = usePermissions();
     
-    // ✅ Fonction locale pour remplacer canCreateMouvementType
     const canCreateMouvementType = (type) => {
-        // Les administrateurs, DG et comptables ont tous les droits
         if (hasRole('ADMIN') || hasRole('COMPTABLE') || hasRole('DG')) {
             return true;
         }
-        // Vérifier la permission spécifique
         return hasPermission('MOUVEMENT_CREATE') || hasPermission('MOUVEMENT.*');
     };
     
@@ -192,7 +290,6 @@ const FicheBien = () => {
     });
     const [loadingElig, setLoadingElig] = useState(false);
 
-    // ✅ Vérifier si l'utilisateur est validateur (DG, COMPTABLE ou ADMIN)
     const userRoles = user?.roles || [];
     const isValidator = userRoles.some(role => ['DG', 'COMPTABLE', 'ADMIN'].includes(role));
 
@@ -209,7 +306,6 @@ const FicheBien = () => {
             if (result.data) {
                 setBien(result.data);
                 setError(null);
-                // ✅ Ne charger l'éligibilité que si l'utilisateur est validateur
                 if (isValidator) {
                     fetchEligibilite(result.data.id_bien);
                 }
@@ -326,18 +422,20 @@ const FicheBien = () => {
     const renderSpecificFields = () => {
         if (!bien?.type_bien) return null;
 
+        const attrs = bien.attributs_specifiques || {};
+
         if (bien.type_bien === 'vehicule') {
             const fields = [
-                { label: t('assets.fieldVehicleType'), value: bien.type_vehicule, col: 6 },
-                { label: t('assets.fieldBrand'), value: bien.marque, col: 6 },
-                { label: t('assets.fieldModel'), value: bien.modele, col: 6 },
-                { label: t('assets.fieldRegistration'), value: bien.immatriculation, col: 6, copy: true },
-                { label: t('assets.fieldWeight'), value: bien.poids ? `${bien.poids} kg` : null, col: 4 },
-                { label: t('assets.fieldDimensions'), value: bien.dimension, col: 4 },
-                { label: t('assets.fieldFuel'), value: bien.type_de_carburant, col: 4 },
-                { label: t('assets.fieldFuelConsumption'), value: bien.consommation_carburant ? `${bien.consommation_carburant} L/100km` : null, col: 6 },
-                { label: t('assets.fieldOilConsumption'), value: bien.consommation_huile ? `${bien.consommation_huile} L/1000km` : null, col: 6 },
-                { label: t('assets.fieldPropulsion'), value: bien.type_propulsion, col: 6 }
+                { label: t('assets.fieldVehicleType'), value: attrs.type_vehicule, col: 6 },
+                { label: t('assets.fieldBrand'), value: attrs.marque, col: 6 },
+                { label: t('assets.fieldModel'), value: attrs.modele, col: 6 },
+                { label: t('assets.fieldRegistration'), value: attrs.immatriculation, col: 6, copy: true },
+                { label: t('assets.fieldWeight'), value: attrs.poids ? `${attrs.poids} kg` : null, col: 4 },
+                { label: t('assets.fieldDimensions'), value: attrs.dimension, col: 4 },
+                { label: t('assets.fieldFuel'), value: attrs.type_carburant, col: 4 },
+                { label: t('assets.fieldFuelConsumption'), value: attrs.consommation_carburant ? `${attrs.consommation_carburant} L/100km` : null, col: 6 },
+                { label: t('assets.fieldOilConsumption'), value: attrs.consommation_huile ? `${attrs.consommation_huile} L/1000km` : null, col: 6 },
+                { label: t('assets.fieldPropulsion'), value: attrs.type_propulsion, col: 6 }
             ].filter(field => hasValidValue(field.value));
 
             if (fields.length === 0) return null;
@@ -355,16 +453,16 @@ const FicheBien = () => {
 
         if (bien.type_bien === 'machine') {
             const fields = [
-                { label: t('assets.fieldManufacturer'), value: bien.fabricant, col: 6 },
-                { label: t('assets.fieldModel'), value: bien.modele, col: 6 },
+                { label: t('assets.fieldManufacturer'), value: attrs.fabricant, col: 6 },
+                { label: t('assets.fieldModel'), value: attrs.modele, col: 6 },
                 { label: t('assets.fieldSerialNumber'), value: bien.numero_serie, col: 6, copy: true },
-                { label: t('assets.fieldPower'), value: bien.puissance ? `${bien.puissance} kW` : null, col: 6 },
-                { label: t('assets.fieldPowerSupply'), value: bien.type_alimentation, col: 6 },
-                { label: t('assets.fieldVoltage'), value: bien.tension_normal, col: 6 },
-                { label: t('assets.fieldAssignedService'), value: bien.service_affecte, col: 6 },
-                { label: t('assets.fieldResponsible'), value: bien.responsable, col: 6 },
-                { label: t('assets.fieldElecConsumption'), value: bien.consommation_elec ? `${bien.consommation_elec} kWh` : null, col: 6 },
-                { label: t('assets.fieldMaintenanceFreq'), value: bien.frequence_maintenance, col: 6 }
+                { label: t('assets.fieldPower'), value: attrs.puissance ? `${attrs.puissance} kW` : null, col: 6 },
+                { label: t('assets.fieldPowerSupply'), value: attrs.type_alimentation, col: 6 },
+                { label: t('assets.fieldVoltage'), value: attrs.tension_normal, col: 6 },
+                { label: t('assets.fieldAssignedService'), value: attrs.service_affecte, col: 6 },
+                { label: t('assets.fieldResponsible'), value: attrs.responsable, col: 6 },
+                { label: t('assets.fieldElecConsumption'), value: attrs.consommation_elec ? `${attrs.consommation_elec} kWh` : null, col: 6 },
+                { label: t('assets.fieldMaintenanceFreq'), value: attrs.frequence_maintenance, col: 6 }
             ].filter(field => hasValidValue(field.value));
 
             if (fields.length === 0) return null;
@@ -382,13 +480,13 @@ const FicheBien = () => {
 
         if (bien.type_bien === 'ordinateur') {
             const fields = [
-                { label: t('assets.fieldBrand'), value: bien.marque, col: 6 },
-                { label: t('assets.fieldModel'), value: bien.modele, col: 6 },
-                { label: t('assets.fieldProcessor'), value: bien.processeur, col: 6 },
-                { label: t('assets.fieldRam'), value: bien.ram, col: 6 },
-                { label: t('assets.fieldStorage'), value: bien.stockage, col: 6 },
-                { label: t('assets.fieldIpAddress'), value: bien.adresse_ip, col: 6, copy: true },
-                { label: t('assets.fieldAssignedUser'), value: bien.utilisateur_affecte, col: 12 }
+                { label: t('assets.fieldBrand'), value: attrs.marque, col: 6 },
+                { label: t('assets.fieldModel'), value: attrs.modele, col: 6 },
+                { label: t('assets.fieldProcessor'), value: attrs.processeur, col: 6 },
+                { label: t('assets.fieldRam'), value: attrs.ram, col: 6 },
+                { label: t('assets.fieldStorage'), value: attrs.stockage, col: 6 },
+                { label: t('assets.fieldIpAddress'), value: attrs.adresse_ip, col: 6, copy: true },
+                { label: t('assets.fieldAssignedUser'), value: attrs.utilisateur_affecte, col: 12 }
             ].filter(field => hasValidValue(field.value));
 
             if (fields.length === 0) return null;
@@ -404,7 +502,29 @@ const FicheBien = () => {
             );
         }
 
-        return null;
+        const dynamicFields = Object.keys(attrs).filter(key => 
+            key !== 'marque' && key !== 'modele' && key !== 'fabricant'
+        );
+
+        if (dynamicFields.length === 0) return null;
+
+        return (
+            <Card variant="outlined" sx={{ mt: 3 }}>
+                <CardHeader
+                    title={t('assets.characteristics', { type: getTypeLabel(bien.type_bien) })}
+                    avatar={<Avatar sx={{ bgcolor: 'primary.main' }}><Build fontSize="small" /></Avatar>}
+                />
+                <CardContent>
+                    <Grid container spacing={2}>
+                        {dynamicFields.map((key) => (
+                            <Grid item xs={12} md={6} key={key}>
+                                <InfoField label={key} value={attrs[key]} />
+                            </Grid>
+                        ))}
+                    </Grid>
+                </CardContent>
+            </Card>
+        );
     };
 
     if (loading) {
@@ -433,6 +553,13 @@ const FicheBien = () => {
     const ageAns = bien.date_acquisition ?
         new Date().getFullYear() - new Date(bien.date_acquisition).getFullYear() : null;
 
+    const titreLibelle = bien.attributs_specifiques?.marque || 
+                          bien.attributs_specifiques?.fabricant || 
+                          bien.libelle || 
+                          '';
+
+    const titreModele = bien.attributs_specifiques?.modele || '';
+
     return (
         <ThemeProvider theme={okapiMuiTheme}>
             <Box sx={{ p: 3 }}>
@@ -444,7 +571,7 @@ const FicheBien = () => {
                 >
                     <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
                         {t('assets.calculateDepreciationTitle', {
-                            name: bien.nom_bien || bien.designation || (bien.marque || bien.fabricant ? `${bien.marque || bien.fabricant} ${bien.modele || ''}`.trim() : `${bien.type_bien || ''} #${bien.id_bien}`),
+                            name: bien.libelle || `${bien.type_bien || ''} #${bien.id_bien}`,
                         })}
                     </DialogTitle>
                     <DialogContent sx={{ p: 0 }}>
@@ -460,14 +587,14 @@ const FicheBien = () => {
                     </DialogActions>
                 </Dialog>
 
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'stretch', md: 'center' }, justifyItems: 'space-between', gap: 2, mb: 3 }}>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'stretch', md: 'center' }, justifyContent: 'space-between', gap: 2, mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
                         <IconButton onClick={() => navigate('/biens')} size="small">
                             <ArrowBack />
                         </IconButton>
                         <Box sx={{ minWidth: 0 }}>
                             <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-                                {getTypeLabel(bien.type_bien)} • {bien.marque || bien.fabricant} {bien.modele}
+                                {getTypeLabel(bien.type_bien)} • {titreLibelle} {titreModele}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                                 {t('assets.qrCodeLabel', { code: bien.qr_code })}
@@ -477,10 +604,7 @@ const FicheBien = () => {
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
                         {canCalculateAmortissement() && (
                             <Tooltip title={t('assets.calculateDepreciation')}>
-                                <IconButton
-                                    onClick={handleOpenAmortissement}
-                                    color="primary"
-                                >
+                                <IconButton onClick={handleOpenAmortissement} color="primary">
                                     <Calculate />
                                 </IconButton>
                             </Tooltip>
@@ -585,6 +709,13 @@ const FicheBien = () => {
                                                         <InfoField label={t('assets.fieldAge')} value={t('assets.fieldAgeValue', { count: ageAns })} />
                                                     </Grid>
                                                 )}
+                                                
+                                                {hasValidValue(bien.libelle) && (
+                                                    <Grid item xs={12}>
+                                                        <InfoField label={t('assets.fieldLibelle')} value={bien.libelle} />
+                                                    </Grid>
+                                                )}
+                                                
                                                 {canViewPurchasePrice && hasValidValue(bien.date_acquisition) && (
                                                     <Grid item xs={12} md={6}>
                                                         <InfoField
@@ -603,6 +734,18 @@ const FicheBien = () => {
                                                         />
                                                     </Grid>
                                                 )}
+                                                
+                                                {hasValidValue(bien.numero_serie) && (
+                                                    <Grid item xs={12} md={6}>
+                                                        <InfoField
+                                                            label={t('assets.fieldSerialNumber')}
+                                                            value={bien.numero_serie}
+                                                            copy
+                                                            copyLabel={t('assets.copy')}
+                                                        />
+                                                    </Grid>
+                                                )}
+                                                
                                                 {hasValidValue(bien.localisation) && (
                                                     <Grid item xs={12}>
                                                         <InfoField
@@ -622,21 +765,21 @@ const FicheBien = () => {
                                                         <Typography variant="body2">{bien.description}</Typography>
                                                     </Grid>
                                                 )}
+
+                                                {/* 🔴 AFFICHAGE DES IMAGES */}
+                                                {bien.images && bien.images.length > 0 && (
+                                                    <Grid item xs={12}>
+                                                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                                            Photos du bien
+                                                        </Typography>
+                                                        <BienImages images={bien.images} />
+                                                    </Grid>
+                                                )}
                                             </Grid>
                                         </CardContent>
                                     </Card>
 
-                                    {renderSpecificFields() && (
-                                        <Card variant="outlined">
-                                            <CardHeader
-                                                title={t('assets.characteristics', { type: getTypeLabel(bien.type_bien) })}
-                                                avatar={<Avatar sx={{ bgcolor: 'primary.main' }}><Build fontSize="small" /></Avatar>}
-                                            />
-                                            <CardContent>
-                                                {renderSpecificFields()}
-                                            </CardContent>
-                                        </Card>
-                                    )}
+                                    {renderSpecificFields()}
                                 </Box>
                             )}
 
@@ -788,7 +931,6 @@ const FicheBien = () => {
                             </Typography>
                         </Paper>
 
-                        {/* ✅ Section éligibilité cession visible seulement pour les validateurs */}
                         {isValidator && (
                             <Box sx={{ mb: 3 }}>
                                 <CessionEligibilitySection
@@ -878,10 +1020,8 @@ const FicheBien = () => {
                                         </Button>
                                     </Grid>
                                 )}
-                                {/* ✅ Boutons de cession/rebut visibles seulement pour les validateurs */}
                                 {isValidator && canCalculateAmortissement() && bien.statut_comptable !== 'CEDE' && bien.statut_comptable !== 'MIS_AU_REBUT' && (
                                     <>
-                                        {/* ✅ Bouton Céder - UNIQUEMENT si éligible ET pas de REBUT validé */}
                                         {eligibilite.cession?.eligible && !eligibilite.rebut?.eligible && (
                                             <Grid item xs={6} sx={{ mt: 1 }}>
                                                 <Tooltip title={loadingElig ? t('common.loading') : ''}>
@@ -901,7 +1041,6 @@ const FicheBien = () => {
                                             </Grid>
                                         )}
 
-                                        {/* ✅ Bouton Mise au rebut - UNIQUEMENT si éligible */}
                                         {eligibilite.rebut?.eligible && (
                                             <Grid item xs={6} sx={{ mt: 1 }}>
                                                 <Tooltip title={loadingElig ? t('common.loading') : ''}>
@@ -922,7 +1061,6 @@ const FicheBien = () => {
                                         )}
                                     </>
                                 )}
-
                             </Grid>
                         </Paper>
                     </Grid>
@@ -939,7 +1077,7 @@ const FicheBien = () => {
                     open={confirmDelete.open}
                     title={t('assets.deleteTitle')}
                     content={t('assets.deleteContent', {
-                        name: `${bien.marque || bien.fabricant} ${bien.modele}`,
+                        name: `${titreLibelle} ${titreModele}`,
                     })}
                     onConfirm={handleDelete}
                     onCancel={() => setConfirmDelete({ open: false })}
