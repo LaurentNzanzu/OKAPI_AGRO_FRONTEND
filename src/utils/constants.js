@@ -25,18 +25,20 @@ export const ETAT_OPTIONS = [
   { value: 'usage', label: 'En usage' },
   { value: 'panne', label: 'En panne' },
   { value: 'reforme', label: 'Réformé' },
-  { value: 'maintenance', label: 'En maintenance' }  // ✅ AJOUTÉ
+  { value: 'maintenance', label: 'En maintenance' },
+  { value: 'en_test', label: 'En test' },  // ✅ Synchronisé avec EtatBienEnum Python
 ];
 
 // ✅ Couleurs pour affichage (ListeBiens.jsx) - version consolidée
 export const ETAT_COLORS = {
   neuf: '#4caf50',        // Vert
-  bon: '#2196f3',         // Bleu (votre valeur existante)
+  bon: '#2196f3',         // Bleu
   usage: '#ff9800',       // Orange
   panne: '#f44336',       // Rouge
   reforme: '#9e9e9e',     // Gris
-  maintenance: '#ff5722', // Orange foncé (votre valeur existante)
-  // ⚠️ États supplémentaires (si utilisés ailleurs)
+  maintenance: '#ff5722', // Orange foncé
+  en_test: '#7c4dff',     // Violet — en test
+  // États supplémentaires (compatibilité)
   en_service: '#4caf50',
   en_maintenance: '#ff5722',
   hors_service: '#f44336'
@@ -50,6 +52,7 @@ export const ETAT_LABELS = {
   panne: 'En panne',
   reforme: 'Réformé',
   maintenance: 'En maintenance',
+  en_test: 'En test',    // ✅ Synchronisé avec EtatBienEnum Python
   // États supplémentaires
   en_service: 'En service',
   en_maintenance: 'En maintenance',
