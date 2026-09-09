@@ -35,7 +35,7 @@ import {
 // CONFIGURATION CLOUDINARY (UPLOAD DIRECT)
 // ============================================================
 // Remplacez ces valeurs par les vôtres
-const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME; 
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET; // Ex: 'my_app_preset'
 
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
@@ -70,8 +70,8 @@ const TypeBienSelector = ({ types, value, onChange, error, loading, onAddType })
               key={typeId}
               type="button"
               className={`flex items-center gap-2 px-3 py-2.5 border-2 rounded-xl transition-all text-sm ${isSelected
-                  ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/20 dark:border-primary-400'
-                  : 'border-border-light dark:border-border-dark hover:border-gray-400 dark:hover:border-night-muted'
+                ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/20 dark:border-primary-400'
+                : 'border-border-light dark:border-border-dark hover:border-gray-400 dark:hover:border-night-muted'
                 } ${loading ? 'opacity-50 cursor-wait' : ''}`}
               onClick={() => onChange(typeId)}
               disabled={loading}
@@ -281,6 +281,7 @@ const FournisseurModal = ({ isOpen, onClose, onSave, onDelete, fournisseur, isEd
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation(); 
     if (!validate()) return;
     setSubmitting(true);
     try {
@@ -392,7 +393,9 @@ const FournisseurModal = ({ isOpen, onClose, onSave, onDelete, fournisseur, isEd
                 <button type="button" className="px-4 py-2 bg-gray-100 dark:bg-night-muted text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-night-hover rounded-lg transition-colors w-full sm:w-auto" onClick={onClose}>
                   {t('common.cancel')}
                 </button>
-                <button type="submit" className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto" disabled={submitting}>
+                <button type="button" 
+                onClick={handleSubmit}
+                className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto" disabled={submitting}>
                   {submitting ? t('common.saving') : (isEdit ? t('common.update') : t('common.add'))}
                 </button>
               </div>
@@ -654,9 +657,16 @@ const LocalisationModal = ({ isOpen, onClose, onSave, existingNames = [] }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const trimmed = nomLocalisation.trim();
-    if (!trimmed) { setError('Le nom de la localisation est requis'); return; }
-    if (existingNames.some(name => name.toUpperCase() === trimmed.toUpperCase())) { setError('Cette localisation existe déjà'); return; }
+    // ✅ Sécurisation : s'assurer que nomLocalisation est une chaîne
+    const trimmed = typeof nomLocalisation === 'string' ? nomLocalisation.trim() : '';
+    if (!trimmed) {
+      setError('Le nom de la localisation est requis');
+      return;
+    }
+    if (existingNames.some(name => name.toUpperCase() === trimmed.toUpperCase())) {
+      setError('Cette localisation existe déjà');
+      return;
+    }
     setSubmitting(true);
     try {
       const result = await onSave({ nom_localisation: trimmed });
@@ -1583,11 +1593,16 @@ const NouveauBien = () => {
   // ============================================================
   // GESTION DE LA CRÉATION RAPIDE DE LOCALISATION
   // ============================================================
-  const handleQuickAddLocalisation = async (nom) => {
+  const handleQuickAddLocalisation = async (data) => {
+    // Si data est un objet avec nom_localisation, l'utiliser ; sinon, si c'est une chaîne, l'utiliser directement
+    const nom = typeof data === 'string' ? data : data?.nom_localisation || '';
+    if (!nom.trim()) {
+      console.warn('Nom de localisation vide');
+      return;
+    }
     try {
       const result = await localisationsService.create({ nom_localisation: nom.trim() });
       setLocalisations(prev => [...prev, result]);
-      // Sélectionner automatiquement la nouvelle localisation
       setFormData(prev => ({ ...prev, id_localisation: result.id_localisation }));
       return result;
     } catch (err) {
