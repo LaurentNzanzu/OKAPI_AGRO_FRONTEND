@@ -73,23 +73,20 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
     const [composants, setComposants] = useState([]);
 
     useEffect(() => {
-        // Charger les données en parallèle
         const loadData = async () => {
             setLoading(true);
             setLoadingReglesError(false);
             
             try {
-                // Essayer de charger les règles d'amortissement (optionnel)
                 try {
                     const rulesData = await amortissementsService.getRegles();
                     setRegles(rulesData || []);
                 } catch (rulesErr) {
                     console.warn('Impossible de charger les règles, utilisation des valeurs par défaut:', rulesErr);
                     setLoadingReglesError(true);
-                    setRegles([]); // Valeurs par défaut
+                    setRegles([]);
                 }
                 
-                // Charger le bien
                 if (bienId && bienId !== 'undefined' && bienId !== 'null') {
                     await loadBien(bienId);
                 } else {
@@ -122,6 +119,20 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
         loadComposants();
     }, [bienId]);
 
+    // Recalculer la prévisualisation dynamiquement dès que les champs pertinents changent
+    useEffect(() => {
+        if (showDetails) {
+            previewCalcul();
+        }
+    }, [
+        formData.date_mise_en_service, 
+        formData.date_acquisition, 
+        formData.exercice, 
+        formData.methode, 
+        formData.valeur_origine, 
+        formData.duree_vie_comptable_ans
+    ]);
+
     const loadBien = async (id) => {
         if (!id || isNaN(id) || parseInt(id) <= 0) {
             setError(t('amortissements.calcul.invalidBienId'));
@@ -133,7 +144,6 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
             const data = await biensService.getById(parseInt(id));
             setBien(data);
             
-            // Dates par défaut
             let dateAcquisition = '';
             let dateMiseEnService = '';
             
@@ -142,7 +152,6 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
                 dateMiseEnService = dateAcquisition;
             }
             
-            // Déterminer la durée de vie par défaut selon le type de bien
             let dureeDefaut = 5;
             if (data.type_bien === 'vehicule') dureeDefaut = 5;
             else if (data.type_bien === 'machine') dureeDefaut = 8;
@@ -176,22 +185,25 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
     const calculerJoursProrataLineaire = () => {
         if (!formData.date_mise_en_service) return 360;
         const dateDebut = new Date(formData.date_mise_en_service);
-        const exercice = formData.exercice;
+        const exercice = parseInt(formData.exercice);
         const debutAnnee = new Date(exercice, 0, 1);
+        
         if (dateDebut <= debutAnnee) return 360;
+        
         const joursDansMois = 30;
         const moisEnCours = dateDebut.getMonth();
         const moisRestants = 12 - moisEnCours;
         const jourDansMois = dateDebut.getDate();
         const joursRestantsMois = Math.min(joursDansMois, 30) - jourDansMois + 1;
-        const totalJours = joursRestantsMois + (moisRestants - 1) * joursDansMois;
-        return Math.min(totalJours, 360);
+        const totalJours = (joursRestantsMois > 0 ? joursRestantsMois : 0) + (moisRestants - 1) * joursDansMois;
+        
+        return Math.max(0, Math.min(totalJours, 360));
     };
 
     const calculerMoisProrataDegressif = () => {
         if (!formData.date_acquisition) return 12;
         const dateDebut = new Date(formData.date_acquisition);
-        const exercice = formData.exercice;
+        const exercice = parseInt(formData.exercice);
         const anneeAcquisition = dateDebut.getFullYear();
         const moisAcquisition = dateDebut.getMonth();
         if (anneeAcquisition < exercice) return 12;
@@ -200,8 +212,8 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
     };
 
     const previewCalcul = () => {
-        const base = parseFloat(formData.valeur_origine) - parseFloat(formData.valeur_residuelle);
-        const dureeTotale = parseInt(formData.duree_vie_comptable_ans);
+        const base = parseFloat(formData.valeur_origine || 0) - parseFloat(formData.valeur_residuelle || 0);
+        const dureeTotale = parseInt(formData.duree_vie_comptable_ans) || 1;
         let annuite = 0;
         let detail = '';
         
@@ -275,9 +287,9 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
                     <div className="bg-primary-50 dark:bg-primary-900/20 p-3 rounded-lg">
                         <p className="text-xs text-primary-600">
                             {t('amortissements.calcul.tauxBase', {
-                                taux: (100 / formData.duree_vie_comptable_ans).toFixed(2),
+                                taux: (100 / (formData.duree_vie_comptable_ans || 1)).toFixed(2),
                                 coeff: formData.coefficient_deg || '?',
-                                result: (100 / formData.duree_vie_comptable_ans * (formData.coefficient_deg || 1)).toFixed(2),
+                                result: (100 / (formData.duree_vie_comptable_ans || 1) * (formData.coefficient_deg || 1)).toFixed(2),
                             })}
                         </p>
                     </div>
@@ -296,62 +308,7 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
                 </div>
             );
         }
-        
-        if (method === 'UNITE_PRODUCTION') {
-            return (
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className={labelCls}>{t('amortissements.calcul.unitesTotales')}</label>
-                        <input type="number" value={formData.unites_totales_prevues} onChange={(e) => setFormData({ ...formData, unites_totales_prevues: e.target.value })} className={inputCls} placeholder="Ex: 100000" />
-                    </div>
-                    <div>
-                        <label className={labelCls}>{t('amortissements.calcul.unitesConsommees')}</label>
-                        <input type="number" value={formData.unites_consommees_exercice} onChange={(e) => setFormData({ ...formData, unites_consommees_exercice: e.target.value })} className={inputCls} placeholder="Ex: 25000" />
-                    </div>
-                </div>
-            );
-        }
-        
-        if (method === 'SPECIFIQUE_OKAPI') {
-            return (
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className={labelCls}>{t('amortissements.calcul.dureeFournisseur')}</label>
-                        <input type="number" value={formData.duree_fournisseur} onChange={(e) => setFormData({ ...formData, duree_fournisseur: e.target.value })} className={inputCls} placeholder="Ex: 7800" />
-                    </div>
-                    <div>
-                        <label className={labelCls}>{t('amortissements.calcul.joursOuvresMois')}</label>
-                        <input type="number" value={formData.jours_ouvres_mois} onChange={(e) => setFormData({ ...formData, jours_ouvres_mois: e.target.value })} className={inputCls} />
-                    </div>
-                    <div>
-                        <label className={labelCls}>{t('amortissements.calcul.joursUtilisationAn')}</label>
-                        <input type="number" value={formData.jours_utilisation_annee} onChange={(e) => setFormData({ ...formData, jours_utilisation_annee: e.target.value })} className={inputCls} placeholder="Ex: 260" />
-                    </div>
-                </div>
-            );
-        }
-        
-        if (method === 'COMPOSANTS') {
-            if (composants.length === 0) {
-                return (
-                    <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
-                        <p className="text-sm text-red-700 dark:text-red-300 flex items-center gap-2">
-                            <AppIcon icon={ExclamationTriangleIcon} size="sm" />
-                            {t('amortissements.calcul.noComposantsHint')}
-                        </p>
-                    </div>
-                );
-            }
-            return (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
-                    <p className="text-sm text-yellow-700 dark:text-yellow-300 flex items-center gap-2">
-                        <AppIcon icon={Cog6ToothIcon} size="sm" />
-                        {t('amortissements.calcul.composantsUsed', { count: composants.length, jours: calculerJoursProrataLineaire() })}
-                    </p>
-                </div>
-            );
-        }
-        
+
         return null;
     };
 
@@ -366,25 +323,57 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
         setSuccess(null);
         
         try {
+            // Nettoyage et conversion stricte des types pour correspondre au schema FastAPI
+            const parseNum = (val) => {
+                if (val === '' || val === null || val === undefined) return null;
+                const cleaned = String(val).replace(',', '.');
+                const parsed = parseFloat(cleaned);
+                return isNaN(parsed) ? null : parsed;
+            };
+
+            const parseIntNum = (val) => {
+                const parsed = parseNum(val);
+                return parsed !== null ? Math.round(parsed) : null;
+            };
+
+            const parseDateISO = (val) => {
+                if (!val) return null;
+                // Utiliser les composants locaux pour éviter le décalage UTC
+                // (ex: "2024-01-15" → new Date().toISOString() → "2024-01-14T22:00:00Z" en UTC+2)
+                const d = new Date(val);
+                if (isNaN(d.getTime())) return null;
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            };
+
             const payload = {
                 id_bien: parseInt(formData.id_bien),
                 exercice: parseInt(formData.exercice),
                 methode: formData.methode,
-                valeur_origine: parseFloat(String(formData.valeur_origine || 0).replace(',', '.')),
-                duree_vie_comptable_ans: parseInt(formData.duree_vie_comptable_ans || 5),
-                duree_vie_fiscale_ans: formData.duree_vie_fiscale_ans ? parseInt(formData.duree_vie_fiscale_ans) : null,
-                coefficient_deg: formData.coefficient_deg ? parseFloat(formData.coefficient_deg) : null,
-                date_acquisition: formData.date_acquisition ? new Date(formData.date_acquisition).toISOString() : new Date(parseInt(formData.exercice), 0, 1).toISOString(),
-                date_mise_en_service: formData.date_mise_en_service ? new Date(formData.date_mise_en_service).toISOString() : new Date(parseInt(formData.exercice), 0, 1).toISOString(),
-                unites_totales_prevues: formData.unites_totales_prevues ? parseInt(formData.unites_totales_prevues) : null,
-                unites_consommees_exercice: formData.unites_consommees_exercice ? parseInt(formData.unites_consommees_exercice) : null,
-                production_totale_prevue: formData.production_totale_prevue ? parseInt(formData.production_totale_prevue) : null,
-                production_reelle_exercice: formData.production_reelle_exercice ? parseInt(formData.production_reelle_exercice) : null,
-                duree_fournisseur: formData.duree_fournisseur ? parseInt(formData.duree_fournisseur) : null,
-                jours_ouvres_mois: parseInt(formData.jours_ouvres_mois),
-                jours_utilisation_annee: formData.jours_utilisation_annee ? parseInt(formData.jours_utilisation_annee) : null
+                valeur_origine: parseNum(formData.valeur_origine) || 0,
+                valeur_residuelle: parseNum(formData.valeur_residuelle) || 0,
+                // ✅ CORRIGÉ : parseIntNum pour garantir le type int attendu par Pydantic
+                duree_vie_comptable_ans: parseIntNum(formData.duree_vie_comptable_ans) || 5,
+                duree_vie_fiscale_ans: parseIntNum(formData.duree_vie_fiscale_ans),
+                coefficient_deg: parseNum(formData.coefficient_deg),
+                // ✅ CORRIGÉ : fallback en YYYY-MM-DD (cohérent avec parseDateISO corrigée, sans toISOString)
+                date_acquisition: parseDateISO(formData.date_acquisition) || `${parseInt(formData.exercice)}-01-01`,
+                date_mise_en_service: parseDateISO(formData.date_mise_en_service) || `${parseInt(formData.exercice)}-01-01`,
+                unites_totales_prevues: parseIntNum(formData.unites_totales_prevues),
+                unites_consommees_exercice: parseIntNum(formData.unites_consommees_exercice),
+                production_totale_prevue: parseIntNum(formData.production_totale_prevue),
+                production_reelle_exercice: parseIntNum(formData.production_reelle_exercice),
+                duree_fournisseur: parseIntNum(formData.duree_fournisseur),
+                jours_ouvres_mois: parseIntNum(formData.jours_ouvres_mois) || 26,
+                // ✅ CORRIGÉ : jours_utilisation_annee respecte la contrainte ge=200 du backend
+                jours_utilisation_annee: Math.max(parseIntNum(formData.jours_utilisation_annee) || 260, 200)
             };
             
+            // 🔍 DEBUG TEMPORAIRE — à supprimer après correction
+            console.log('[DEBUG] Payload envoyé au backend:', JSON.stringify(payload, null, 2));
+
             await amortissementsService.create(payload);
             setSuccess(t('amortissements.calcul.success'));
             
@@ -393,15 +382,18 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
             }
         } catch (err) {
             console.error('Erreur calcul amortissement:', err);
+            // 🔍 DEBUG TEMPORAIRE — afficher le detail exact du 400
+            if (err.response) {
+                console.error('[DEBUG] Status:', err.response.status);
+                console.error('[DEBUG] Body:', JSON.stringify(err.response.data, null, 2));
+            }
             const errorMessage = formatApiError(err, t);
             setError(errorMessage);
-            setTimeout(() => setError(null), 5000);
         } finally {
             setSubmitting(false);
         }
     };
 
-    // Si encore en chargement
     if (loading) {
         return (
             <div className="p-8 text-center">
@@ -426,60 +418,8 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
                     {success}
                 </div>
             )}
-            
-            {loadingReglesError && !error && (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 p-2 rounded-lg mb-3 text-xs border border-yellow-200 dark:border-yellow-800">
-                    <span className="inline-flex items-center gap-1">
-                        <AppIcon icon={ExclamationTriangleIcon} size="xs" />
-                        {t('amortissements.calcul.defaultRulesWarning')}
-                    </span>
-                </div>
-            )}
-            
-            {showDetails && calculPreview && (
-                <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-lg mb-4 border border-gray-200 dark:border-slate-700">
-                    <div className="flex justify-between items-center mb-2">
-                        <h4 className="font-bold text-gray-700 dark:text-slate-200 flex items-center gap-2">
-                            <AppIcon icon={ChartBarIcon} size="sm" />
-                            {t('amortissements.calcul.previewTitle')}
-                        </h4>
-                        <button onClick={() => setShowDetails(false)} className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">
-                            <AppIcon icon={XMarkIcon} size="md" />
-                        </button>
-                    </div>
-                    <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                            <span className="text-gray-500 dark:text-slate-400">{t('amortissements.calcul.baseAmortissable')}</span>
-                            <span className="font-medium">{calculPreview.base.toFixed(2)} USD</span>
-                        </div>
-                        {calculPreview.jours && (
-                            <div className="flex justify-between">
-                                <span className="text-gray-500 dark:text-slate-400">{t('amortissements.calcul.prorataJours')}</span>
-                                <span>{t('amortissements.calcul.joursSur360', { jours: calculPreview.jours })}</span>
-                            </div>
-                        )}
-                        {calculPreview.mois && (
-                            <div className="flex justify-between">
-                                <span className="text-gray-500 dark:text-slate-400">{t('amortissements.calcul.prorataMois')}</span>
-                                <span>{t('amortissements.calcul.moisSur12', { mois: calculPreview.mois })}</span>
-                            </div>
-                        )}
-                        {calculPreview.taux && (
-                            <div className="flex justify-between">
-                                <span className="text-gray-500 dark:text-slate-400">{t('amortissements.calcul.taux')}</span>
-                                <span>{calculPreview.taux.toFixed(2)}%</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between pt-2 border-t">
-                            <span className="font-bold text-gray-700 dark:text-slate-200">{t('amortissements.calcul.annuite')}</span>
-                            <span className="font-bold text-primary-600">{calculPreview.annuite.toFixed(2)} USD</span>
-                        </div>
-                    </div>
-                </div>
-            )}
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Infos bien chargé */}
                 {bien && (
                     <div className="bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg border border-gray-200 dark:border-slate-700">
                         <p className="text-sm text-gray-600 dark:text-slate-300">{t('amortissements.calcul.bienConcerne')}</p>
@@ -494,7 +434,7 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
                         <input 
                             type="number" 
                             value={formData.exercice} 
-                            onChange={(e) => setFormData({ ...formData, exercice: parseInt(e.target.value) })} 
+                            onChange={(e) => setFormData({ ...formData, exercice: parseInt(e.target.value) || new Date().getFullYear() })} 
                             className={inputCls} 
                             required 
                         />
@@ -549,7 +489,6 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
                             className={inputCls} 
                             required 
                         />
-                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">{t('amortissements.calcul.dureeComptableHint')}</p>
                     </div>
                     <div>
                         <label className={labelCls}>{t('amortissements.calcul.dureeFiscale')}</label>
@@ -568,54 +507,24 @@ const CalculAmortissement = ({ bienId, onSuccess, onCancel }) => {
                         <input 
                             type="date" 
                             value={formData.date_acquisition} 
-                            onChange={(e) => { setFormData({ ...formData, date_acquisition: e.target.value }); setShowDetails(false); }} 
+                            onChange={(e) => setFormData({ ...formData, date_acquisition: e.target.value })} 
                             className={inputCls} 
                             required 
                         />
-                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">{t('amortissements.calcul.dateAcquisitionHint')}</p>
                     </div>
                     <div>
                         <label className={labelCls}>{t('amortissements.calcul.dateMiseEnService')}</label>
                         <input 
                             type="date" 
                             value={formData.date_mise_en_service} 
-                            onChange={(e) => { setFormData({ ...formData, date_mise_en_service: e.target.value }); setShowDetails(false); }} 
+                            onChange={(e) => setFormData({ ...formData, date_mise_en_service: e.target.value })} 
                             className={inputCls} 
                             required 
                         />
-                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">{t('amortissements.calcul.dateMiseEnServiceHint')}</p>
                     </div>
                 </div>
                 
                 {getDynamicFields()}
-
-                {formData.methode === 'COMPOSANTS' && composants.length > 0 && (
-                    <div className="mt-4">
-                        <h4 className="font-medium">{t('amortissements.calcul.composantsTitle')}</h4>
-                        <table className="min-w-full text-sm">
-                            <thead>
-                                <tr>
-                                    <th className="text-left py-1 pr-2">{t('amortissements.calcul.colDesignation')}</th>
-                                    <th className="text-left py-1 pr-2">{t('amortissements.calcul.colValeur')}</th>
-                                    <th className="text-left py-1 pr-2">{t('amortissements.calcul.colDuree')}</th>
-                                    <th className="text-left py-1">{t('amortissements.calcul.colAnnuiteEstimee')}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {composants.map((c) => (
-                                    <tr key={c.id_composant}>
-                                        <td className="py-1 pr-2">{c.designation}</td>
-                                        <td className="py-1 pr-2">{formatPrice(c.valeur)}</td>
-                                        <td className="py-1 pr-2">{c.duree_vie_ans}</td>
-                                        <td className="py-1">
-                                            {formatPrice(c.duree_vie_ans ? c.valeur / c.duree_vie_ans : 0)}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
                 
                 <div className="flex gap-3 pt-4 border-t">
                     <button type="button" onClick={previewCalcul} className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">

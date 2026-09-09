@@ -26,7 +26,7 @@ import {
 } from '../ui/icons';
 
 const PlanningMaintenance = () => {
-  const { t } = useTranslation();
+    const { t } = useTranslation();
     const maintenanceTypeConfig = useMemo(() => getMaintenanceTypeConfig(t), [t]);
     const maintenanceStatutConfig = useMemo(() => getMaintenanceStatutConfig(t), [t]);
     const navigate = useNavigate();
@@ -61,7 +61,7 @@ const PlanningMaintenance = () => {
         try {
             setLoading(true);
             let data;
-            
+
             if (filter === 'a-venir') {
                 data = await maintenancesService.getAVenir();
             } else if (filter === 'en-retard') {
@@ -75,16 +75,16 @@ const PlanningMaintenance = () => {
                     try {
                         const maints = await maintenancesService.getByBienId(bien.id_bien);
                         allMaintenances.push(...maints);
-                    } catch (e) {}
+                    } catch (e) { }
                 }
                 data = allMaintenances;
             }
-            
+
             const filtered = searchTerm ? data.filter(m =>
                 m.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 m.bien_designation?.toLowerCase().includes(searchTerm.toLowerCase())
             ) : data;
-            
+
             setMaintenances(filtered || []);
         } catch (err) {
             console.error('Erreur chargement maintenances:', err);
@@ -121,41 +121,35 @@ const PlanningMaintenance = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.id_bien) {
+            setError("Veuillez sélectionner un bien.");
+            return;
+        }
+
+        if (!formData.description || formData.description.trim().length < 5) {
+            setError("La description doit contenir au moins 5 caractères.");
+            return;
+        }
+
         setSubmitting(true);
         setError(null);
-        
+
         try {
             await maintenancesService.create({
-                id_bien: parseInt(formData.id_bien),
+                id_bien: parseInt(formData.id_bien, 10),
                 type_maintenance: formData.type_maintenance,
                 date_planifiee: new Date(formData.date_planifiee).toISOString(),
-                description: formData.description,
-                periodicite_jours: formData.periodicite_jours ? parseInt(formData.periodicite_jours) : null
+                description: formData.description.trim(),
+                periodicite_jours: formData.periodicite_jours ? parseInt(formData.periodicite_jours, 10) : null
             });
             setShowForm(false);
             fetchMaintenances();
         } catch (err) {
-        // ✅ Gestion robuste des erreurs FastAPI
-        let errorMsg = t('maintenances.planning.planError');
-        
-        if (err.response?.status === 422 && Array.isArray(err.response.data?.detail)) {
-            // FastAPI retourne un tableau d'erreurs de validation
-            errorMsg = err.response.data.detail
-                .map(e => {
-                    const field = e.loc?.slice(1)?.join('.') || t('common.errors.field');
-                    return `${field}: ${e.msg}`;
-                })
-                .join('; ');
-        } else if (err.response?.data?.detail) {
-            errorMsg = typeof err.response.data.detail === 'string' 
-                ? err.response.data.detail 
-                : JSON.stringify(err.response.data.detail);
-        } else if (err.message) {
-            errorMsg = err.message;
-        }
-        
-        setError(errorMsg);
-        console.error('Erreur création maintenance:', err);
+            // La gestion d'erreur affichera les détails précis renvoyés par l'API
+            setError(err.response?.data?.detail || "Erreur lors de la création");
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -199,18 +193,17 @@ const PlanningMaintenance = () => {
                     {['all', 'a-venir', 'en-retard', 'mes'].map(f => {
                         const filterInfo = FILTER_LABELS[f];
                         return (
-                        <button
-                            key={f}
-                            onClick={() => setFilter(f)}
-                            className={`px-3 py-1 rounded-full text-sm inline-flex items-center gap-1.5 ${
-                                filter === f
-                                    ? 'bg-primary-600 text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                        >
-                            {filterInfo && <AppIcon icon={filterInfo.Icon} size="xs" className={filter === f ? 'text-white' : ''} />}
-                            {filterInfo?.label}
-                        </button>
+                            <button
+                                key={f}
+                                onClick={() => setFilter(f)}
+                                className={`px-3 py-1 rounded-full text-sm inline-flex items-center gap-1.5 ${filter === f
+                                        ? 'bg-primary-600 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                            >
+                                {filterInfo && <AppIcon icon={filterInfo.Icon} size="xs" className={filter === f ? 'text-white' : ''} />}
+                                {filterInfo?.label}
+                            </button>
                         );
                     })}
                 </div>
@@ -248,7 +241,7 @@ const PlanningMaintenance = () => {
                         const typeInfo = getTypeInfo(m.type_maintenance);
                         const statutInfo = getStatutInfo(m.statut);
                         const reste = joursRestants(m.date_planifiee);
-                        
+
                         return (
                             <div
                                 key={m.id_maintenance}

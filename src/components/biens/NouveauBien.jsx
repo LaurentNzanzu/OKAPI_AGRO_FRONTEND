@@ -1,8 +1,13 @@
+// frontend/src/components/biens/NouveauBien.jsx
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from '../../context/LanguageContext';
-import { getEtatOptions, getTypeBienOptions, getNouveauBienSteps } from '../../utils/i18nBiens';
+import { getEtatOptions, getNouveauBienSteps } from '../../utils/i18nBiens';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios'; // Import ajouté pour Cloudinary
+import ImageUpload from '../common/ImageUpload';
+import ConfigInventaireModal from './ConfigInventaireModal';
 import { biensService } from '../../services/biens';
+import { typesBiensService } from '../../services/typesBiens';
 import { localisationsService } from '../../services/localisations';
 import { fournisseursService } from '../../services/fournisseurs';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -23,7 +28,216 @@ import {
   XMarkIcon,
   TrashIcon,
   PencilSquareIcon,
+  CubeIcon,
 } from '../ui/icons';
+
+// ============================================================
+// CONFIGURATION CLOUDINARY (UPLOAD DIRECT)
+// ============================================================
+// Remplacez ces valeurs par les vôtres
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME; 
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET; // Ex: 'my_app_preset'
+
+const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
+
+// ============================================================
+// COMPOSANT : TypeBienSelector
+// ============================================================
+const TypeBienSelector = ({ types, value, onChange, error, loading, onAddType }) => {
+  const { t } = useTranslation();
+
+  // Grouper les types par catégorie (avec icône)
+  const getTypeIcon = (code) => {
+    const icons = {
+      VEHICULE: <TruckIcon className="w-4 h-4" />,
+      MACHINE: <BuildingOffice2Icon className="w-4 h-4" />,
+      ORDINATEUR: <ComputerDesktopIcon className="w-4 h-4" />,
+    };
+    return icons[code] || <CubeIcon className="w-4 h-4" />;
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+        {t('assets.fieldType')} <span className="text-danger">*</span>
+      </label>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {types.map((type) => {
+          const typeId = type.id_type_bien ?? type.id;
+          const isSelected = Boolean(value) && value === typeId;
+          return (
+            <button
+              key={typeId}
+              type="button"
+              className={`flex items-center gap-2 px-3 py-2.5 border-2 rounded-xl transition-all text-sm ${isSelected
+                  ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/20 dark:border-primary-400'
+                  : 'border-border-light dark:border-border-dark hover:border-gray-400 dark:hover:border-night-muted'
+                } ${loading ? 'opacity-50 cursor-wait' : ''}`}
+              onClick={() => onChange(typeId)}
+              disabled={loading}
+            >
+              <span className={isSelected ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-slate-400'}>
+                {getTypeIcon(type.code)}
+              </span>
+              <span className={`font-medium text-sm ${isSelected ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-slate-300'}`}>
+                {type.libelle}
+              </span>
+            </button>
+          );
+        })}
+        {/* Bouton pour ajouter un nouveau type de bien */}
+        <button
+          type="button"
+          onClick={onAddType}
+          className="flex items-center justify-center gap-2 px-3 py-2.5 border-2 border-dashed border-border-light dark:border-border-dark rounded-xl transition-all text-sm hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-night-hover text-gray-500 dark:text-slate-400"
+        >
+          <AppIcon icon={PlusIcon} size="sm" />
+          <span className="font-medium text-sm">Nouveau type</span>
+        </button>
+      </div>
+      {error && <span className="text-sm text-danger mt-1">{error}</span>}
+      {loading && <span className="text-sm text-gray-500 dark:text-slate-400 mt-1">{t('common.loading')}</span>}
+    </div>
+  );
+};
+
+// ============================================================
+// COMPOSANT : ChampDynamique (CORRIGÉ)
+// ============================================================
+const ChampDynamique = ({ champ, value, onChange, error }) => {
+  const { t } = useTranslation();
+  const fieldName = champ.nom;
+  const fieldType = champ.type || 'text';
+  const isRequired = champ.obligatoire || false;
+  const options = champ.options || [];
+  const placeholder = champ.aide || `Saisir ${champ.nom}`;
+  const label = champ.label || champ.nom;
+
+  // Rendu selon le type de champ
+  switch (fieldType) {
+    case 'select':
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+            {label} {isRequired && <span className="text-danger">*</span>}
+          </label>
+          <select
+            value={value || ''}
+            onChange={(e) => onChange(fieldName, e.target.value)}
+            className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${error ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+          >
+            <option value="">Sélectionnez...</option>
+            {options.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+          {error && <span className="text-sm text-danger mt-1">{error}</span>}
+        </div>
+      );
+
+    case 'boolean':
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+            {label} {isRequired && <span className="text-danger">*</span>}
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name={fieldName}
+                value="true"
+                checked={value === true || value === 'true'}
+                onChange={() => onChange(fieldName, true)}
+                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm text-gray-700 dark:text-slate-300">Oui</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name={fieldName}
+                value="false"
+                checked={value === false || value === 'false' || value === '' || value === null || value === undefined}
+                onChange={() => onChange(fieldName, false)}
+                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm text-gray-700 dark:text-slate-300">Non</span>
+            </label>
+          </div>
+          {error && <span className="text-sm text-danger mt-1">{error}</span>}
+        </div>
+      );
+
+    case 'number':
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+            {label} {isRequired && <span className="text-danger">*</span>}
+          </label>
+          <input
+            type="number"
+            value={value || ''}
+            onChange={(e) => onChange(fieldName, e.target.value)}
+            step="0.01"
+            className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${error ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+            placeholder={placeholder}
+          />
+          {error && <span className="text-sm text-danger mt-1">{error}</span>}
+        </div>
+      );
+
+    case 'date':
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+            {label} {isRequired && <span className="text-danger">*</span>}
+          </label>
+          <input
+            type="date"
+            value={value || ''}
+            onChange={(e) => onChange(fieldName, e.target.value)}
+            className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${error ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+          />
+          {error && <span className="text-sm text-danger mt-1">{error}</span>}
+        </div>
+      );
+
+    case 'textarea':
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+            {label} {isRequired && <span className="text-danger">*</span>}
+          </label>
+          <textarea
+            value={value || ''}
+            onChange={(e) => onChange(fieldName, e.target.value)}
+            rows={2}
+            className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${error ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+            placeholder={placeholder}
+          />
+          {error && <span className="text-sm text-danger mt-1">{error}</span>}
+        </div>
+      );
+
+    default: // text, email, tel
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+            {label} {isRequired && <span className="text-danger">*</span>}
+          </label>
+          <input
+            type={fieldType === 'email' ? 'email' : fieldType === 'tel' ? 'tel' : 'text'}
+            value={value || ''}
+            onChange={(e) => onChange(fieldName, e.target.value)}
+            className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${error ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+            placeholder={placeholder}
+          />
+          {error && <span className="text-sm text-danger mt-1">{error}</span>}
+        </div>
+      );
+  }
+};
 
 // ============================================================
 // COMPOSANT : FournisseurModal
@@ -449,7 +663,18 @@ const LocalisationModal = ({ isOpen, onClose, onSave, existingNames = [] }) => {
       if (result) onClose();
     } catch (err) {
       console.error('Erreur création localisation:', err);
-      setError(err.response?.data?.detail || 'Erreur lors de la création');
+      const detail = err.response?.data?.detail;
+      let errorMsg = 'Erreur lors de la création';
+      if (typeof detail === 'string') {
+        errorMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errorMsg = detail.map(d => (typeof d === 'string' ? d : d.msg || JSON.stringify(d))).join(', ');
+      } else if (detail && typeof detail === 'object') {
+        errorMsg = detail.msg || detail.message || JSON.stringify(detail);
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      setError(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -496,50 +721,398 @@ const LocalisationModal = ({ isOpen, onClose, onSave, existingNames = [] }) => {
 };
 
 // ============================================================
-// COMPOSANT : ModalAjoutSimple (pour Marque, Modèle, Fabricant, Processeur)
+// COMPOSANT : TypeBienModal (Modal pour créer un nouveau type)
 // ============================================================
-const ModalAjoutSimple = ({ isOpen, title, label, onClose, onSave }) => {
-  const [valeur, setValeur] = useState('');
-  
+const TypeBienModal = ({ isOpen, onClose, onSave, existingNames = [] }) => {
+  const [libelle, setLibelle] = useState('');
+  const [code, setCode] = useState('');
+  const [champs, setChamps] = useState([]);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
   useEffect(() => {
-    if (isOpen) setValeur('');
+    if (isOpen) {
+      setLibelle('');
+      setCode('');
+      setChamps([]);
+      setError('');
+      setSubmitting(false);
+    }
   }, [isOpen]);
+
+  const handleAddChamp = () => {
+    setChamps(prev => [
+      ...prev,
+      { id: Date.now(), nom: '', label: '', type: 'text', obligatoire: false, options: '', aide: '' }
+    ]);
+  };
+
+  const handleRemoveChamp = (id) => {
+    setChamps(prev => prev.filter(c => c.id !== id));
+  };
+
+  const handleChampChange = (id, field, value) => {
+    setChamps(prev => prev.map(c => {
+      if (c.id === id) {
+        const updated = { ...c, [field]: value };
+        // Auto-générer le nom technique à partir du label si le nom n'est pas encore manuellement saisi
+        if (field === 'label' && (!c.nom || c.nom === c._autoNom)) {
+          const auto = value
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9_]/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_+|_+$/g, '');
+          updated.nom = auto;
+          updated._autoNom = auto;
+        }
+        return updated;
+      }
+      return c;
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const trimmed = libelle.trim();
+    if (!trimmed) {
+      setError('Le libellé du type est requis');
+      return;
+    }
+    if (trimmed.length < 2) {
+      setError('Le libellé doit comporter au moins 2 caractères');
+      return;
+    }
+    if (existingNames.some(name => name?.toUpperCase() === trimmed.toUpperCase())) {
+      setError('Ce type de bien existe déjà');
+      return;
+    }
+
+    // Nettoyer et formater le code pour respecter le pattern backend ^[A-Z0-9_]+$ (longueur 2 à 20)
+    const rawCode = code.trim() || trimmed;
+    let formattedCode = rawCode
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9_]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .substring(0, 20);
+
+    if (formattedCode.length < 2) {
+      formattedCode = (formattedCode + '_TYPE').substring(0, 20);
+    }
+
+    // Formater les champs spécifiques
+    const formattedChamps = champs
+      .map(c => {
+        const cleanNom = (c.nom || c.label || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, '_')
+          .replace(/_+/g, '_')
+          .replace(/^_+|_+$/g, '');
+
+        if (!cleanNom) return null;
+
+        const champObj = {
+          nom: cleanNom,
+          label: (c.label || c.nom || cleanNom).trim(),
+          type: c.type || 'text',
+          obligatoire: Boolean(c.obligatoire),
+        };
+
+        if (c.aide?.trim()) {
+          champObj.aide = c.aide.trim();
+        }
+
+        if (c.type === 'select' && c.options) {
+          if (Array.isArray(c.options)) {
+            champObj.options = c.options;
+          } else if (typeof c.options === 'string') {
+            champObj.options = c.options.split(',').map(o => o.trim()).filter(Boolean);
+          }
+        }
+
+        return champObj;
+      })
+      .filter(Boolean);
+
+    setSubmitting(true);
+    try {
+      const result = await typesBiensService.create({
+        libelle: trimmed,
+        code: formattedCode,
+        compte_comptable: '2440',
+        champs_specifiques: formattedChamps,
+        est_actif: true
+      });
+      if (result) {
+        onSave(result);
+        onClose();
+      }
+    } catch (err) {
+      console.error('Erreur création type de bien:', err);
+      const detail = err.response?.data?.detail;
+
+      let errorMsg = 'Erreur lors de la création';
+      if (typeof detail === 'string') {
+        errorMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errorMsg = detail.map(d => (typeof d === 'string' ? d : d.msg || JSON.stringify(d))).join(', ');
+      } else if (detail && typeof detail === 'object') {
+        errorMsg = detail.msg || detail.message || JSON.stringify(detail);
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+
+      setError(errorMsg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-surface-dark rounded-xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl mx-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center p-4 sm:p-5 border-b border-border-light dark:border-border-dark sticky top-0 bg-white dark:bg-surface-dark z-10">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100">
+            <span className="inline-flex items-center gap-2"><AppIcon icon={PlusIcon} size="sm" /> Ajouter un type de bien</span>
+          </h3>
+          <button className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-night-hover transition-colors" onClick={onClose}>
+            <AppIcon icon={XMarkIcon} size="md" className="text-gray-500 dark:text-slate-400" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                Libellé du type <span className="text-danger">*</span>
+              </label>
+              <input
+                type="text"
+                value={libelle}
+                onChange={(e) => { setLibelle(e.target.value); setError(''); }}
+                className={`w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${error ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+                placeholder="Ex: Ordinateur, Véhicule..."
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                Code (optionnel)
+              </label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                placeholder="Ex: ORDINATEUR"
+              />
+            </div>
+          </div>
+
+          {/* Section Caractéristiques Spécifiques */}
+          <div className="pt-2 border-t border-border-light dark:border-border-dark">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                  Caractéristiques spécifiques (optionnelles)
+                </h4>
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  Champs dynamiques demandés lors de la saisie d'un bien de ce type (Étape 3)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddChamp}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-100 rounded-lg transition-colors"
+              >
+                <AppIcon icon={PlusIcon} size="xs" />
+                Ajouter un champ
+              </button>
+            </div>
+
+            {champs.length > 0 ? (
+              <div className="space-y-3 mt-3">
+                {champs.map((c, index) => (
+                  <div key={c.id} className="p-3 bg-gray-50 dark:bg-night-hover/40 rounded-lg border border-border-light dark:border-border-dark space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-gray-500 dark:text-slate-400">
+                        Champ #{index + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveChamp(c.id)}
+                        className="p-1 text-danger hover:bg-danger/10 rounded transition-colors"
+                        title="Supprimer ce champ"
+                      >
+                        <AppIcon icon={TrashIcon} size="xs" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">
+                          Nom affiché (Label) <span className="text-danger">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={c.label}
+                          onChange={(e) => handleChampChange(c.id, 'label', e.target.value)}
+                          placeholder="Ex: Processeur, RAM..."
+                          className="w-full px-2.5 py-1.5 text-xs border border-border-light dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">
+                          Type de donnée
+                        </label>
+                        <select
+                          value={c.type}
+                          onChange={(e) => handleChampChange(c.id, 'type', e.target.value)}
+                          className="w-full px-2.5 py-1.5 text-xs border border-border-light dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100"
+                        >
+                          <option value="text">Texte</option>
+                          <option value="number">Nombre</option>
+                          <option value="date">Date</option>
+                          <option value="select">Liste déroulante</option>
+                          <option value="boolean">Oui / Non</option>
+                          <option value="textarea">Texte long</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {c.type === 'select' && (
+                      <div>
+                        <label className="block text-xs text-gray-600 dark:text-slate-400 mb-0.5">
+                          Options (séparées par une virgule)
+                        </label>
+                        <input
+                          type="text"
+                          value={c.options}
+                          onChange={(e) => handleChampChange(c.id, 'options', e.target.value)}
+                          placeholder="Ex: 8 Go, 16 Go, 32 Go"
+                          className="w-full px-2.5 py-1.5 text-xs border border-border-light dark:border-border-dark rounded-md bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <label className="inline-flex items-center gap-1.5 text-xs text-gray-700 dark:text-slate-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={c.obligatoire}
+                          onChange={(e) => handleChampChange(c.id, 'obligatoire', e.target.checked)}
+                          className="rounded border-border-light dark:border-border-dark text-primary-600 focus:ring-primary-500 w-3.5 h-3.5"
+                        />
+                        Champ obligatoire
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 dark:text-slate-500 italic text-center py-2">
+                Aucun champ spécifique configuré pour l'instant.
+              </p>
+            )}
+          </div>
+
+          {error && <span className="text-sm text-danger block mt-1">{error}</span>}
+
+          <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 pt-4 border-t border-border-light dark:border-border-dark">
+            <button type="button" className="px-4 py-2 bg-gray-100 dark:bg-night-muted text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-night-hover rounded-lg transition-colors w-full sm:w-auto text-sm" onClick={onClose}>Annuler</button>
+            <button type="submit" className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto text-sm" disabled={submitting}>
+              {submitting ? 'Création...' : 'Ajouter'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// COMPOSANT : ModalAjoutSimple (pour Marque, Modèle, Fabricant, Processeur)
+// ============================================================
+const ModalAjoutSimple = ({ isOpen, title, label, value, onChange, onSave, onClose, error, existingValues = [] }) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [localError, setLocalError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setLocalError('');
+      setSubmitting(false);
+    }
+  }, [isOpen]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const trimmed = valeur.trim();
-    if (!trimmed) return;
-    onSave(trimmed);
-    setValeur('');
-    onClose();
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setLocalError('Ce champ est requis');
+      return;
+    }
+    if (existingValues.some(v => v.toUpperCase() === trimmed.toUpperCase())) {
+      setLocalError('Cette valeur existe déjà');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onSave(trimmed);
+      onClose();
+    } catch (err) {
+      console.error('Erreur création:', err);
+      setLocalError(err.response?.data?.detail || 'Erreur lors de la création');
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4" onClick={onClose}>
       <div className="bg-white dark:bg-surface-dark rounded-xl w-full max-w-md shadow-2xl mx-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center p-4 sm:p-5 border-b border-border-light dark:border-border-dark">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100">{title}</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100">
+            <span className="inline-flex items-center gap-2">
+              <AppIcon icon={PlusIcon} size="sm" /> {title}
+            </span>
+          </h3>
           <button className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-night-hover transition-colors" onClick={onClose}>
             <AppIcon icon={XMarkIcon} size="md" className="text-gray-500 dark:text-slate-400" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 sm:p-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{label} <span className="text-danger">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+              {label} <span className="text-danger">*</span>
+            </label>
             <input
               type="text"
-              value={valeur}
-              onChange={(e) => setValeur(e.target.value)}
-              className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+              value={value}
+              onChange={(e) => { onChange(e.target.value); setLocalError(''); }}
+              className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${localError || error ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
               placeholder={`Ex: ${label}...`}
               autoFocus
             />
+            {(localError || error) && <span className="text-sm text-danger mt-1">{localError || error}</span>}
           </div>
           <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 pt-4 border-t border-border-light dark:border-border-dark">
-            <button type="button" className="px-4 py-2 bg-gray-100 dark:bg-night-muted text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-night-hover rounded-lg transition-colors w-full sm:w-auto" onClick={onClose}>Annuler</button>
-            <button type="submit" className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors w-full sm:w-auto">Ajouter</button>
+            <button type="button" className="px-4 py-2 bg-gray-100 dark:bg-night-muted text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-night-hover rounded-lg transition-colors w-full sm:w-auto" onClick={onClose}>
+              Annuler
+            </button>
+            <button type="submit" className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto" disabled={submitting}>
+              {submitting ? 'Création...' : 'Ajouter'}
+            </button>
           </div>
         </form>
       </div>
@@ -553,105 +1126,469 @@ const ModalAjoutSimple = ({ isOpen, title, label, onClose, onSave }) => {
 const NouveauBien = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [activeStep, setActiveStep] = useState(0);
-  
-  // Données maîtres (listes pour les selects)
-  const [marques, setMarques] = useState(['Toyota', 'Renault', 'Peugeot', 'Mercedes', 'Volvo', 'Dell', 'HP', 'Lenovo', 'Apple']);
-  const [modeles, setModeles] = useState(['Hilux', 'Clio', '308', 'Sprinter', 'FH', 'Latitude', 'EliteBook', 'ThinkPad', 'MacBook']);
-  const [fabricants, setFabricants] = useState(['Siemens', 'Caterpillar', 'ABB', 'Schneider', 'Bosch', 'Mitsubishi']);
-  const [processeurs, setProcesseurs] = useState(['Intel i3', 'Intel i5', 'Intel i7', 'Intel i9', 'AMD Ryzen 3', 'AMD Ryzen 5', 'AMD Ryzen 7', 'Apple M1', 'Apple M2', 'Apple M3']);
-  
-  // États pour les modales d'ajout
-  const [showAddMarqueModal, setShowAddMarqueModal] = useState(false);
-  const [showAddModeleModal, setShowAddModeleModal] = useState(false);
-  const [showAddFabricantModal, setShowAddFabricantModal] = useState(false);
-  const [showAddProcesseurModal, setShowAddProcesseurModal] = useState(false);
 
+  // --- États principaux ---
+  const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // --- États pour les données de l'API ---
+  const [typesBiens, setTypesBiens] = useState([]);
+  const [typesLoading, setTypesLoading] = useState(true);
+  const [localisations, setLocalisations] = useState([]);
+  const [localisationsLoading, setLocalisationsLoading] = useState(true);
+
+  // --- États pour les options de champs (création rapide) ---
+  const [marqueOptions, setMarqueOptions] = useState([]);
+  const [modeleOptions, setModeleOptions] = useState([]);
+  const [fabricantOptions, setFabricantOptions] = useState([]);
+  const [processeurOptions, setProcesseurOptions] = useState([]);
+
+  // --- États pour les modals de création rapide ---
+  const [showNewMarque, setShowNewMarque] = useState(false);
+  const [showNewModele, setShowNewModele] = useState(false);
+  const [showNewFabricant, setShowNewFabricant] = useState(false);
+  const [showNewProcesseur, setShowNewProcesseur] = useState(false);
+  const [showNewLocalisation, setShowNewLocalisation] = useState(false);
+  const [showNewTypeBien, setShowNewTypeBien] = useState(false);
+
+  // --- États pour les valeurs des champs de création rapide ---
+  const [newMarqueValue, setNewMarqueValue] = useState('');
+  const [newModeleValue, setNewModeleValue] = useState('');
+  const [newFabricantValue, setNewFabricantValue] = useState('');
+  const [newProcesseurValue, setNewProcesseurValue] = useState('');
+  const [newLocalisationValue, setNewLocalisationValue] = useState('');
+
+  // --- État du formulaire principal ---
   const [formData, setFormData] = useState({
-    type_bien: '',
-    date_acquisition: new Date().toISOString().split('T')[0],
+    // Étape 1 : Informations générales
+    id_type_bien: null,
+    libelle: '',
+    // description supprimée
+    numero_serie: '',
+    numero_inventaire: '',
+    date_acquisition: '',
     prix_acquisition: '',
-    etat: 'NEUF',
-    id_localisation: '',
-    date_fin_garantie: '',
-    description: '',
-    mode_paiement: 'credit',
+    etat: 'BON', // Valeur par défaut modifiée de 'bon' à 'BON'
+    mode_paiement: 'comptant', // credit, comptant
+
+    // Étape 2 : Fournisseur & Localisation
     fournisseur_id: null,
-    // Véhicule
-    marque: '',
-    modele: '',
-    immatriculation: '',
-    // Machine
-    fabricant: '',
-    puissance: '',
-    prix_base: '',
-    unites_totales_prevues: '',
-    unites_consommees: '',
-    duree_fournisseur: '',
-    // Ordinateur
-    processeur: '',
-    ram_valeur: '',
-    ram_unite: 'Go',
-    stockage_valeur: '',
-    stockage_unite: 'Go',
+    id_localisation: '',
+    // Champs spécifiques au type de bien (attributs_specifiques)
+    attributs_specifiques: {},
+
+    // Étape 3 : Champs spécifiques selon le type
+    // Les champs spécifiques sont gérés dynamiquement dans attributs_specifiques
   });
 
-  const [localisations, setLocalisations] = useState([]);
-  const [composants, setComposants] = useState([]);
-  const [errors, setErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [showLocalisationModal, setShowLocalisationModal] = useState(false);
-  const [localisationsLoading, setLocalisationsLoading] = useState(false);
+  // --- États pour les images et la config inventaire ---
+  const [imagesFiles, setImagesFiles] = useState([]);
+  const [showConfigInventaire, setShowConfigInventaire] = useState(false);
 
-  const steps = useMemo(() => getNouveauBienSteps(t), [t]);
-  const ETAT_OPTIONS = useMemo(() => getEtatOptions(t), [t]);
-  const TYPE_OPTIONS = useMemo(() => getTypeBienOptions(t), [t]);
-  const isMachineProduction = formData.type_bien === 'machine';
+  // --- États de validation ---
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [stepErrors, setStepErrors] = useState({});
 
-  // Gestionnaire pour l'ajout de nouvelle valeur dans les listes
-  const handleAddMarque = (value) => {
-    if (!marques.includes(value)) setMarques([...marques, value]);
-  };
-  const handleAddModele = (value) => {
-    if (!modeles.includes(value)) setModeles([...modeles, value]);
-  };
-  const handleAddFabricant = (value) => {
-    if (!fabricants.includes(value)) setFabricants([...fabricants, value]);
-  };
-  const handleAddProcesseur = (value) => {
-    if (!processeurs.includes(value)) setProcesseurs([...processeurs, value]);
+  // --- État pour le type de bien sélectionné (avec ses champs) ---
+  const [selectedType, setSelectedType] = useState(null);
+
+  // --- État pour les champs dynamiques à afficher ---
+  const [dynamicFields, setDynamicFields] = useState([]);
+
+  // ============================================================
+  // FONCTION : UPLOAD VERS CLOUDINARY
+  // ============================================================
+  const uploadImageToCloudinary = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
+
+    try {
+      const response = await axios.post(CLOUDINARY_URL, formData, {
+        onUploadProgress: (progressEvent) => {
+          // Ici vous pourriez gérer une barre de progression par image si nécessaire
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          // console.log(`Upload progression: ${percentCompleted}%`);
+        }
+      });
+
+      // On retourne uniquement les données nécessaires pour le backend
+      return {
+        url: response.data.secure_url,
+        public_id: response.data.public_id,
+      };
+    } catch (error) {
+      console.error("Erreur upload Cloudinary:", error);
+      throw new Error("Erreur lors de l'upload de l'image");
+    }
   };
 
+  // ============================================================
+  // CHARGEMENT DES DONNÉES INITIALES
+  // ============================================================
   useEffect(() => {
-    const loadLocalisations = async () => {
+    const loadInitialData = async () => {
+      setTypesLoading(true);
       setLocalisationsLoading(true);
       try {
-        const data = await localisationsService.getAll();
-        setLocalisations(data.localisations || []);
+        // Charger les types de biens actifs
+        const types = await typesBiensService.getAllActifs();
+        setTypesBiens(types);
+
+        // Charger les localisations
+        const locs = await localisationsService.getAll();
+        setLocalisations(locs);
+
+        // Charger les options pour les champs de sélection rapide
+        try {
+          const marques = await biensService.getMarques();
+          setMarqueOptions(marques.map(m => m.nom || m));
+        } catch (e) { /* ignore */ }
+
+        try {
+          const modeles = await biensService.getModeles();
+          setModeleOptions(modeles.map(m => m.nom || m));
+        } catch (e) { /* ignore */ }
+
+        try {
+          const fabricants = await biensService.getFabricants();
+          setFabricantOptions(fabricants.map(f => f.nom || f));
+        } catch (e) { /* ignore */ }
+
+        try {
+          const processeurs = await biensService.getProcesseurs();
+          setProcesseurOptions(processeurs.map(p => p.nom || p));
+        } catch (e) { /* ignore */ }
+
       } catch (err) {
-        console.error('Erreur chargement localisations:', err);
+        console.error('Erreur chargement données initiales:', err);
+        setError('Impossible de charger les données nécessaires');
       } finally {
+        setTypesLoading(false);
         setLocalisationsLoading(false);
       }
     };
-    loadLocalisations();
+
+    loadInitialData();
   }, []);
 
+  // ============================================================
+  // EFFET : Mise à jour des champs dynamiques quand le type change
+  // ============================================================
   useEffect(() => {
-    if (!isMachineProduction) return;
-    const base = parseFloat(formData.prix_base) || 0;
-    const totalComposants = composants.reduce((sum, c) => sum + (parseFloat(c.prix_achat) || 0), 0);
-    const total = base + totalComposants;
-    setFormData(prev => ({ ...prev, prix_acquisition: total > 0 ? String(total) : '' }));
-  }, [formData.prix_base, composants, isMachineProduction]);
+    if (formData.id_type_bien) {
+      const type = typesBiens.find(t => (t.id_type_bien ?? t.id) === formData.id_type_bien);
+      setSelectedType(type || null);
 
-  const handleCreateLocalisation = async (data) => {
+      if (type && type.champs_specifiques) {
+        // S'assurer que champs_specifiques est un tableau (gestion du cas où c'est une string JSON)
+        let champs = type.champs_specifiques;
+        if (typeof champs === 'string') {
+          try {
+            champs = JSON.parse(champs);
+          } catch (e) {
+            champs = [];
+          }
+        }
+
+        if (Array.isArray(champs)) {
+          setDynamicFields(champs);
+
+          const initialAttrs = {};
+          champs.forEach(champ => {
+            if (champ.valeur_par_defaut !== undefined && champ.valeur_par_defaut !== null) {
+              initialAttrs[champ.nom] = champ.valeur_par_defaut;
+            } else if (champ.type === 'boolean') {
+              initialAttrs[champ.nom] = false;
+            } else {
+              initialAttrs[champ.nom] = '';
+            }
+          });
+          setFormData(prev => ({
+            ...prev,
+            attributs_specifiques: { ...prev.attributs_specifiques, ...initialAttrs }
+          }));
+        } else {
+          setDynamicFields([]);
+        }
+      } else {
+        setDynamicFields([]);
+      }
+    } else {
+      setSelectedType(null);
+      setDynamicFields([]);
+    }
+  }, [formData.id_type_bien, typesBiens]);
+
+  // ============================================================
+  // GESTION DES CHAMPS DYNAMIQUES
+  // ============================================================
+  const handleDynamicFieldChange = (fieldName, value) => {
+    setFormData(prev => ({
+      ...prev,
+      attributs_specifiques: {
+        ...prev.attributs_specifiques,
+        [fieldName]: value
+      }
+    }));
+    // Effacer l'erreur du champ si elle existe
+    if (fieldErrors[`attr_${fieldName}`]) {
+      setFieldErrors(prev => ({ ...prev, [`attr_${fieldName}`]: null }));
+    }
+  };
+
+  // ============================================================
+  // GESTION DU FORMULAIRE
+  // ============================================================
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({ ...prev, [field]: null }));
+    }
+  };
+
+  const handleTypeChange = (typeId) => {
+    // Récupérer l'objet complet du type sélectionné
+    const fullType = typesBiens.find(t => (t.id_type_bien ?? t.id) === typeId);
+    setSelectedType(fullType || null);
+
+    // Initialiser les champs dynamiques et leurs valeurs par défaut
+    let champs = fullType?.champs_specifiques || [];
+    if (typeof champs === 'string') {
+      try {
+        champs = JSON.parse(champs);
+      } catch (e) {
+        champs = [];
+      }
+    }
+
+    const initialAttrs = {};
+    if (Array.isArray(champs)) {
+      setDynamicFields(champs);
+      champs.forEach(champ => {
+        if (champ.valeur_par_defaut !== undefined && champ.valeur_par_defaut !== null) {
+          initialAttrs[champ.nom] = champ.valeur_par_defaut;
+        } else if (champ.type === 'boolean') {
+          initialAttrs[champ.nom] = false;
+        } else {
+          initialAttrs[champ.nom] = '';
+        }
+      });
+    } else {
+      setDynamicFields([]);
+    }
+
+    // Réinitialiser les attributs spécifiques quand on change de type
+    setFormData(prev => ({
+      ...prev,
+      id_type_bien: typeId,
+      attributs_specifiques: initialAttrs
+    }));
+    if (fieldErrors.id_type_bien) {
+      setFieldErrors(prev => ({ ...prev, id_type_bien: null }));
+    }
+  };
+
+  // ============================================================
+  // VALIDATION DES ÉTAPES
+  // ============================================================
+  const validateStep1 = () => {
+    const errors = {};
+    if (!formData.id_type_bien) errors.id_type_bien = 'Veuillez sélectionner un type de bien';
+    if (!formData.libelle?.trim()) errors.libelle = 'Le libellé est requis';
+    if (!formData.date_acquisition) errors.date_acquisition = 'La date d\'acquisition est requise';
+    if (!formData.prix_acquisition) {
+      errors.prix_acquisition = 'Le prix d\'acquisition est requis';
+    } else if (isNaN(parseFloat(formData.prix_acquisition)) || parseFloat(formData.prix_acquisition) <= 0) {
+      errors.prix_acquisition = 'Le prix doit être un nombre positif';
+    }
+    if (!formData.mode_paiement) errors.mode_paiement = 'Veuillez sélectionner un mode de paiement';
+
+    // Valider aussi les champs spécifiques obligatoires s'ils sont affichés
+    dynamicFields.forEach(champ => {
+      if (champ.obligatoire) {
+        const value = formData.attributs_specifiques?.[champ.nom];
+        if (value === undefined || value === null || value === '' || (champ.type === 'boolean' && (value === undefined || value === null))) {
+          errors[`attr_${champ.nom}`] = `Le champ "${champ.label || champ.nom}" est obligatoire`;
+        }
+      }
+    });
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const errors = {};
+    if (!formData.fournisseur_id) errors.fournisseur_id = 'Veuillez sélectionner un fournisseur';
+    if (!formData.id_localisation) errors.id_localisation = 'Veuillez sélectionner une localisation';
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateStep3 = () => {
+    const errors = {};
+    // Valider les champs spécifiques obligatoires
+    dynamicFields.forEach(champ => {
+      if (champ.obligatoire) {
+        const value = formData.attributs_specifiques?.[champ.nom];
+        if (value === undefined || value === null || value === '' || (champ.type === 'boolean' && (value === undefined || value === null))) {
+          errors[`attr_${champ.nom}`] = `Le champ "${champ.label || champ.nom}" est obligatoire`;
+        }
+      }
+    });
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // ============================================================
+  // NAVIGATION ENTRE ÉTAPES
+  // ============================================================
+  const nextStep = () => {
+    let valid = true;
+    if (step === 1) valid = validateStep1();
+    else if (step === 2) valid = validateStep2();
+    else if (step === 3) valid = validateStep3();
+
+    if (valid) {
+      setStep(prev => Math.min(prev + 1, 3));
+    }
+  };
+
+  const prevStep = () => {
+    setStep(prev => Math.max(prev - 1, 1));
+  };
+
+  // ============================================================
+  // SOUMISSION DU FORMULAIRE (NOUVELLE VERSION AVEC CLOUDINARY)
+  // ============================================================
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // 1. Validation de base : vérifier qu'au moins une image est sélectionnée
+    if (!imagesFiles || imagesFiles.length === 0) {
+      setError('Veuillez ajouter au moins une image.');
+      return;
+    }
+
+    // 2. Valider toutes les étapes avant soumission
+    const valid1 = validateStep1();
+    const valid2 = validateStep2();
+    const valid3 = validateStep3();
+
+    if (!valid1 || !valid2 || !valid3) {
+      // Aller à la première étape qui a des erreurs
+      if (!valid1) setStep(1);
+      else if (!valid2) setStep(2);
+      else if (!valid3) setStep(3);
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
     try {
-      const result = await localisationsService.create(data);
+      // 3. Upload des images vers Cloudinary
+      const uploadedImagesData = await Promise.all(
+        imagesFiles.map(file => uploadImageToCloudinary(file))
+      );
+
+      // 4. Préparer les données du bien
+      const bienData = {
+        libelle: formData.libelle,
+        id_type_bien: formData.id_type_bien,
+        date_acquisition: formData.date_acquisition,
+        prix_acquisition: parseFloat(formData.prix_acquisition),
+        etat: formData.etat,
+        id_localisation: formData.id_localisation,
+        mode_paiement: formData.mode_paiement,
+        fournisseur_id: formData.fournisseur_id ? parseInt(formData.fournisseur_id) : null,
+        numero_serie: formData.numero_serie?.trim() || null,
+        numero_inventaire: formData.numero_inventaire?.trim() || null,
+        attributs_specifiques: formData.attributs_specifiques || {},
+        images: uploadedImagesData, // tableau d'objets {url, public_id}
+      };
+
+      // 5. Envoi vers l'API backend (en JSON)
+      const result = await biensService.createWithImages(bienData);
+
+      // Rediriger vers la page du bien créé
+      navigate(`/biens/${result.id_bien}`);
+    } catch (err) {
+      console.error('Erreur création du bien:', err);
+      const detail = err.response?.data?.detail;
+      let errorMsg = 'Une erreur est survenue lors de la création du bien';
+      if (typeof detail === 'string') {
+        errorMsg = detail;
+      } else if (Array.isArray(detail)) {
+        errorMsg = detail.map(d => (typeof d === 'string' ? d : d.msg || JSON.stringify(d))).join(', ');
+      } else if (detail && typeof detail === 'object') {
+        errorMsg = detail.msg || detail.message || JSON.stringify(detail);
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      setError(errorMsg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ============================================================
+  // GESTION DE L'ANNULATION
+  // ============================================================
+  const handleCancel = () => {
+    setShowConfirmDialog(true);
+  };
+
+  const confirmCancel = () => {
+    setShowConfirmDialog(false);
+    navigate('/biens');
+  };
+
+  // ============================================================
+  // GESTION DES CRÉATIONS RAPIDES (Marque, Modèle, Fabricant, Processeur)
+  // ============================================================
+  const handleQuickAdd = async (type, value, setOptions) => {
+    try {
+      let result;
+      switch (type) {
+        case 'marque':
+          result = await biensService.createMarque({ nom: value.trim() });
+          setMarqueOptions(prev => [...prev, result.nom]);
+          break;
+        case 'modele':
+          result = await biensService.createModele({ nom: value.trim() });
+          setModeleOptions(prev => [...prev, result.nom]);
+          break;
+        case 'fabricant':
+          result = await biensService.createFabricant({ nom: value.trim() });
+          setFabricantOptions(prev => [...prev, result.nom]);
+          break;
+        case 'processeur':
+          result = await biensService.createProcesseur({ nom: value.trim() });
+          setProcesseurOptions(prev => [...prev, result.nom]);
+          break;
+        default:
+          break;
+      }
+      return result;
+    } catch (err) {
+      console.error(`Erreur création ${type}:`, err);
+      throw err;
+    }
+  };
+
+  // ============================================================
+  // GESTION DE LA CRÉATION RAPIDE DE LOCALISATION
+  // ============================================================
+  const handleQuickAddLocalisation = async (nom) => {
+    try {
+      const result = await localisationsService.create({ nom_localisation: nom.trim() });
       setLocalisations(prev => [...prev, result]);
-      handleChange('id_localisation', String(result.id_localisation));
+      // Sélectionner automatiquement la nouvelle localisation
+      setFormData(prev => ({ ...prev, id_localisation: result.id_localisation }));
       return result;
     } catch (err) {
       console.error('Erreur création localisation:', err);
@@ -659,824 +1596,497 @@ const NouveauBien = () => {
     }
   };
 
-  const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }));
-  };
-
-  const validateStep = (step) => {
-    const newErrors = {};
-    if (step === 0) {
-      if (!formData.type_bien) newErrors.type_bien = 'Le type de bien est requis';
-      if (!formData.date_acquisition) newErrors.date_acquisition = "La date d'acquisition est requise";
-      if (!formData.id_localisation || formData.id_localisation === '') {
-        newErrors.id_localisation = 'La localisation est requise';
-      }
-      if (!formData.mode_paiement) newErrors.mode_paiement = 'Le mode de paiement est requis';
-      if (formData.mode_paiement === 'credit' && !formData.fournisseur_id) {
-        newErrors.fournisseur_id = 'Le fournisseur est requis pour un paiement à crédit';
-      }
-    }
-
-    if (step === 1 && formData.type_bien) {
-      if (formData.type_bien === 'vehicule') {
-        if (!formData.marque) newErrors.marque = 'La marque est requise';
-        if (!formData.immatriculation) newErrors.immatriculation = "L'immatriculation est requise";
-      } 
-      else if (formData.type_bien === 'machine') {
-        if (!formData.fabricant) newErrors.fabricant = 'Le fabricant est requis';
-        if (!formData.prix_base || parseFloat(formData.prix_base) < 0) {
-          newErrors.prix_base = 'Le prix de base de la machine est requis';
-        }
-      } 
-      else if (formData.type_bien === 'ordinateur') {
-        if (!formData.marque) newErrors.marque = 'La marque est requise';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleNext = () => {
-    if (validateStep(activeStep)) {
-      setActiveStep(prev => prev + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handleBack = () => {
-    setActiveStep(prev => prev - 1);
-  };
-
-  const getErrorMessage = (err) => {
-    const detail = err.response?.data?.detail;
-    if (Array.isArray(detail)) {
-      const firstError = detail[0];
-      const field = firstError.loc ? firstError.loc[firstError.loc.length - 1] : '';
-      const msg = firstError.msg || '';
-      
-      const fieldLabels = {
-        'prix_base': 'Prix de base',
-        'fabricant': 'Fabricant',
-        'marque': 'Marque',
-        'immatriculation': 'Immatriculation',
-        'type_bien': 'Type de bien',
-        'date_acquisition': "Date d'acquisition",
-        'id_localisation': 'Localisation',
-        'mode_paiement': 'Mode de paiement',
-        'fournisseur_id': 'Fournisseur',
-        'prix_acquisition': "Prix d'acquisition"
-      };
-      
-      const fieldLabel = fieldLabels[field] || field;
-      
-      if (msg.includes('required') || msg.includes('requis')) {
-        return `Le champ "${fieldLabel}" est obligatoire.`;
-      }
-      if (msg.includes('invalid') || msg.includes('invalide')) {
-        return `Le champ "${fieldLabel}" est invalide.`;
-      }
-      if (msg.includes('greater than') || msg.includes('positive')) {
-        return `Le champ "${fieldLabel}" doit être supérieur à 0.`;
-      }
-      
-      return msg || 'Veuillez vérifier les champs du formulaire.';
-    }
-
-    if (typeof detail === 'string') {
-      if (detail.includes('localisation')) {
-        return 'La localisation sélectionnée n\'est pas valide.';
-      }
-      if (detail.includes('fournisseur')) {
-        return 'Le fournisseur sélectionné n\'est pas valide.';
-      }
-      if (detail.includes('prix')) {
-        return 'Le prix saisi n\'est pas valide.';
-      }
-      if (detail.includes('existe déjà')) {
-        return 'Un bien avec ces informations existe déjà.';
-      }
-      if (detail.includes('colonne') || detail.includes('column') || detail.includes('id_localisation')) {
-        return 'Erreur de configuration de la base de données. Veuillez contacter l\'administrateur.';
-      }
-      return detail;
-    }
-
-    return 'Une erreur est survenue lors de la création du bien. Veuillez réessayer.';
-  };
-
-  const handleSubmit = async () => {
-    if (!validateStep(1)) return;
-    setSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      const payload = {
-        type_bien: formData.type_bien,
-        date_acquisition: formData.date_acquisition,
-        etat: formData.etat,
-        id_localisation: parseInt(formData.id_localisation, 10),
-        date_fin_garantie: formData.date_fin_garantie || null,
-        description: formData.description || null,
-        mode_paiement: formData.mode_paiement,
-        fournisseur_id: formData.fournisseur_id,
-      };
-      
-      if (formData.type_bien === 'machine') {
-        payload.prix_base = parseFloat(formData.prix_base) || 0;
-        payload.prix_acquisition = parseFloat(formData.prix_acquisition) || 0;
-        payload.composants = composants.map((c) => ({
-          numero_serie: c.numero_serie,
-          prix_achat: parseFloat(c.prix_achat) || 0,
-          designation: c.designation || `Composant ${c.numero_serie}`,
-        }));
-      } else {
-        payload.prix_acquisition = parseFloat(formData.prix_acquisition) || 0;
-      }
-      
-      if (formData.type_bien === 'vehicule') {
-        payload.marque = formData.marque;
-        payload.modele = formData.modele || null;
-        payload.immatriculation = formData.immatriculation;
-      } else if (formData.type_bien === 'machine') {
-        payload.fabricant = formData.fabricant;
-        payload.puissance = formData.puissance ? parseFloat(formData.puissance) : null;
-        payload.unites_totales_prevues = formData.unites_totales_prevues ? parseInt(formData.unites_totales_prevues, 10) : null;
-        payload.unites_consommees = formData.unites_consommees ? parseInt(formData.unites_consommees, 10) : null;
-        payload.duree_fournisseur = formData.duree_fournisseur ? parseInt(formData.duree_fournisseur, 10) : null;
-      } else if (formData.type_bien === 'ordinateur') {
-        payload.marque = formData.marque;
-        payload.processeur = formData.processeur || null;
-        // Concaténer RAM et Stockage avec leur unité
-        payload.ram = formData.ram_valeur ? `${formData.ram_valeur} ${formData.ram_unite}` : null;
-        payload.stockage = formData.stockage_valeur ? `${formData.stockage_valeur} ${formData.stockage_unite}` : null;
-      }
-      
-      const result = await biensService.create(payload);
-      setShowSuccessDialog(true);
-      setTimeout(() => navigate('/biens'), 3000);
-      
-    } catch (err) {
-      console.error('Erreur création bien:', err);
-      setSubmitError(getErrorMessage(err));
-    } finally {
-      setSubmitting(false);
-    }
+  const handleQuickAddTypeBien = (newType) => {
+    setTypesBiens(prev => [...prev, newType]);
+    // Sélectionner automatiquement le nouveau type créé
+    const newTypeId = newType.id_type_bien ?? newType.id;
+    setFormData(prev => ({ ...prev, id_type_bien: newTypeId }));
   };
 
   // ============================================================
-  // RENDER : Champs spécifiques par type de bien
+  // RENDU : ÉTAPES DU FORMULAIRE
   // ============================================================
-  const renderSpecificFields = () => {
-    const type = formData.type_bien;
-    if (!type) {
-      return (
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-blue-700 dark:text-blue-300 text-center text-sm sm:text-base">
-          <span className="inline-flex items-center gap-2"><AppIcon icon={ExclamationTriangleIcon} size="sm" /> Veuillez d'abord sélectionner un type de bien à l'étape 1</span>
-        </div>
-      );
-    }
+  const steps = [
+    { id: 1, label: 'Informations générales', icon: <ClipboardDocumentListIcon className="w-4 h-4" /> },
+    { id: 2, label: 'Fournisseur & Localisation', icon: <TruckIcon className="w-4 h-4" /> },
+    { id: 3, label: 'Caractéristiques', icon: <ComputerDesktopIcon className="w-4 h-4" /> },
+  ];
 
-    // ============================================================
-    // TYPE : VÉHICULE
-    // ============================================================
-    if (type === 'vehicule') {
-      return (
-        <div className="space-y-4">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 inline-flex items-center gap-2"><AppIcon icon={TruckIcon} size="md" /> Informations véhicule</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {/* Marque - Select avec bouton + */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                Marque <span className="text-danger">*</span>
-              </label>
-              <div className="flex gap-2">
-                <select
-                  value={formData.marque}
-                  onChange={(e) => handleChange('marque', e.target.value)}
-                  className={`flex-1 px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.marque ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
-                >
-                  <option value="">Sélectionnez une marque</option>
-                  {marques.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setShowAddMarqueModal(true)}
-                  className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center justify-center shrink-0"
-                  title="Ajouter une marque"
-                >
-                  <AppIcon icon={PlusIcon} size="sm" />
-                </button>
-              </div>
-              {errors.marque && <span className="text-sm text-danger mt-1">{errors.marque}</span>}
-            </div>
+  // ============================================================
+  // RENDU : ÉTAPE 1 - INFORMATIONS GÉNÉRALES (MODIFIÉE)
+  // ============================================================
+  const renderStep1 = () => (
+    <div className="space-y-4 sm:space-y-5">
+      {/* Type de bien */}
+      <TypeBienSelector
+        types={typesBiens}
+        value={formData.id_type_bien}
+        onChange={handleTypeChange}
+        error={fieldErrors.id_type_bien}
+        loading={typesLoading}
+        onAddType={() => setShowNewTypeBien(true)}
+      />
 
-            {/* Modèle - Select avec bouton + */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Modèle</label>
-              <div className="flex gap-2">
-                <select
-                  value={formData.modele}
-                  onChange={(e) => handleChange('modele', e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                >
-                  <option value="">Sélectionnez un modèle</option>
-                  {modeles.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModeleModal(true)}
-                  className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center justify-center shrink-0"
-                  title="Ajouter un modèle"
-                >
-                  <AppIcon icon={PlusIcon} size="sm" />
-                </button>
-              </div>
-            </div>
-          </div>
+      {/* Libellé */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+          {t('assets.fieldLibelle')} <span className="text-danger">*</span>
+        </label>
+        <input
+          type="text"
+          value={formData.libelle}
+          onChange={(e) => handleChange('libelle', e.target.value)}
+          className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${fieldErrors.libelle ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+          placeholder="Ex: Camion Toyota Hilux 2024"
+        />
+        {fieldErrors.libelle && <span className="text-sm text-danger mt-1">{fieldErrors.libelle}</span>}
+      </div>
 
-          {/* Immatriculation */}
+      {/* Photos (remplace description) */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+          Photos du bien (max 4)
+        </label>
+        <ImageUpload
+          maxFiles={4}
+          maxSizeMB={1}
+          onChange={setImagesFiles}
+          errors={fieldErrors.images}
+        />
+      </div>
+
+      {/* Numéro de série */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+          {t('assets.fieldNumeroSerie')}
+        </label>
+        <input
+          type="text"
+          value={formData.numero_serie}
+          onChange={(e) => handleChange('numero_serie', e.target.value)}
+          className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+          placeholder="Ex: 1HGCM82633A123456"
+        />
+      </div>
+
+      {/* Numéro d'inventaire */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+          {t('assets.fieldNumeroInventaire')}
+        </label>
+        <input
+          type="text"
+          value={formData.numero_inventaire}
+          onChange={(e) => handleChange('numero_inventaire', e.target.value)}
+          className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+          placeholder="Ex: INV-2024-001"
+        />
+      </div>
+
+      {/* Spécifications spécifiques dynamiques selon le type de bien */}
+      {selectedType && dynamicFields && dynamicFields.length > 0 && (
+        <div className="p-4 sm:p-5 bg-primary-50/50 dark:bg-primary-900/10 rounded-xl border border-primary-200 dark:border-primary-800/60 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-              Immatriculation <span className="text-danger">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.immatriculation}
-              onChange={(e) => handleChange('immatriculation', e.target.value)}
-              className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.immatriculation ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
-              placeholder="Ex: AB-123-CD"
-            />
-            {errors.immatriculation && <span className="text-sm text-danger mt-1">{errors.immatriculation}</span>}
-          </div>
-        </div>
-      );
-    }
-
-    // ============================================================
-    // TYPE : MACHINE DE PRODUCTION
-    // ============================================================
-    if (type === 'machine') {
-      return (
-        <div className="space-y-4">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 inline-flex items-center gap-2"><AppIcon icon={BuildingOffice2Icon} size="md" /> Machine de production</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {/* Fabricant - Select avec bouton + */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                Fabricant <span className="text-danger">*</span>
-              </label>
-              <div className="flex gap-2">
-                <select
-                  value={formData.fabricant}
-                  onChange={(e) => handleChange('fabricant', e.target.value)}
-                  className={`flex-1 px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.fabricant ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
-                >
-                  <option value="">Sélectionnez un fabricant</option>
-                  {fabricants.map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setShowAddFabricantModal(true)}
-                  className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center justify-center shrink-0"
-                  title="Ajouter un fabricant"
-                >
-                  <AppIcon icon={PlusIcon} size="sm" />
-                </button>
-              </div>
-              {errors.fabricant && <span className="text-sm text-danger mt-1">{errors.fabricant}</span>}
-            </div>
-
-            {/* Puissance */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Puissance (kW/CV)</label>
-              <input
-                type="number"
-                value={formData.puissance}
-                onChange={(e) => handleChange('puissance', e.target.value)}
-                className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                placeholder="Ex: 150"
-              />
-            </div>
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-primary-600"></span>
+              Spécifications pour {selectedType.libelle}
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+              Caractéristiques techniques spécifiques à ce type d'équipement
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Unités totales prévues</label>
-              <input
-                type="number"
-                value={formData.unites_totales_prevues}
-                onChange={(e) => handleChange('unites_totales_prevues', e.target.value)}
-                className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                placeholder="Ex: 100000"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Unités consommées</label>
-              <input
-                type="number"
-                value={formData.unites_consommees}
-                onChange={(e) => handleChange('unites_consommees', e.target.value)}
-                className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                placeholder="Ex: 0"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Durée fournisseur (jours)</label>
-              <input
-                type="number"
-                value={formData.duree_fournisseur}
-                onChange={(e) => handleChange('duree_fournisseur', e.target.value)}
-                className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                placeholder="Ex: 7800"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                Prix de base machine (USD) <span className="text-danger">*</span>
-              </label>
-              <input
-                type="number"
-                value={formData.prix_base}
-                onChange={(e) => handleChange('prix_base', e.target.value)}
-                className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.prix_base ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
-                placeholder="Prix de base hors composants"
-              />
-              {errors.prix_base && <span className="text-sm text-danger mt-1">{errors.prix_base}</span>}
-            </div>
-          </div>
-
-          {/* Composants */}
-          <div className="mt-6 pt-4 border-t border-border-light dark:border-border-dark">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
-              <h4 className="font-medium text-gray-900 dark:text-slate-100 text-sm sm:text-base">Composants</h4>
-              <button
-                type="button"
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg transition-colors w-full sm:w-auto"
-                onClick={() => setComposants(prev => [...prev, { numero_serie: '', prix_achat: '', designation: '' }])}
-              >
-                <AppIcon icon={PlusIcon} size="xs" /> Ajouter
-              </button>
-            </div>
-            {composants.map((comp, index) => (
-              <div key={index} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 p-3 bg-gray-50 dark:bg-night-active rounded-lg mb-2 items-end">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-0.5">Désignation</label>
-                  <input
-                    type="text"
-                    value={comp.designation}
-                    onChange={(e) => { const updated = [...composants]; updated[index] = { ...updated[index], designation: e.target.value }; setComposants(updated); }}
-                    className="w-full px-2 sm:px-3 py-1.5 text-sm border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                    placeholder="Ex: Moteur principal"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-0.5">N° de série *</label>
-                  <input
-                    type="text"
-                    value={comp.numero_serie}
-                    onChange={(e) => { const updated = [...composants]; updated[index] = { ...updated[index], numero_serie: e.target.value }; setComposants(updated); }}
-                    className="w-full px-2 sm:px-3 py-1.5 text-sm border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                    placeholder="Ex: MOT-99823-A"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-0.5">Prix d'achat *</label>
-                  <input
-                    type="number"
-                    value={comp.prix_achat}
-                    onChange={(e) => { const updated = [...composants]; updated[index] = { ...updated[index], prix_achat: e.target.value }; setComposants(updated); }}
-                    className="w-full px-2 sm:px-3 py-1.5 text-sm border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                    placeholder="Ex: 1500"
-                  />
-                </div>
-                <div className="flex justify-end sm:justify-end lg:justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setComposants(prev => prev.filter((_, i) => i !== index))}
-                    className="px-2.5 py-1.5 bg-red-100 text-danger hover:bg-red-200 rounded-lg transition-colors flex items-center gap-1 text-sm w-full sm:w-auto justify-center"
-                  >
-                    <AppIcon icon={TrashIcon} size="sm" /> Supprimer
-                  </button>
-                </div>
+            {dynamicFields.map((champ) => (
+              <div key={champ.nom} className={champ.type === 'textarea' ? 'sm:col-span-2' : ''}>
+                <ChampDynamique
+                  champ={champ}
+                  value={formData.attributs_specifiques?.[champ.nom] ?? ''}
+                  onChange={handleDynamicFieldChange}
+                  error={fieldErrors[`attr_${champ.nom}`]}
+                />
               </div>
             ))}
           </div>
         </div>
-      );
-    }
+      )}
 
-    // ============================================================
-    // TYPE : ORDINATEUR
-    // ============================================================
-    if (type === 'ordinateur') {
-      return (
-        <div className="space-y-4">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 inline-flex items-center gap-2"><AppIcon icon={ComputerDesktopIcon} size="md" /> Informations ordinateur</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {/* Marque - Select avec bouton + */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                Marque <span className="text-danger">*</span>
-              </label>
-              <div className="flex gap-2">
-                <select
-                  value={formData.marque}
-                  onChange={(e) => handleChange('marque', e.target.value)}
-                  className={`flex-1 px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.marque ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
-                >
-                  <option value="">Sélectionnez une marque</option>
-                  {marques.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setShowAddMarqueModal(true)}
-                  className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center justify-center shrink-0"
-                  title="Ajouter une marque"
-                >
-                  <AppIcon icon={PlusIcon} size="sm" />
-                </button>
-              </div>
-              {errors.marque && <span className="text-sm text-danger mt-1">{errors.marque}</span>}
-            </div>
-
-            {/* Processeur - Select avec bouton + */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Processeur</label>
-              <div className="flex gap-2">
-                <select
-                  value={formData.processeur}
-                  onChange={(e) => handleChange('processeur', e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                >
-                  <option value="">Sélectionnez un processeur</option>
-                  {processeurs.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setShowAddProcesseurModal(true)}
-                  className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center justify-center shrink-0"
-                  title="Ajouter un processeur"
-                >
-                  <AppIcon icon={PlusIcon} size="sm" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* RAM */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">RAM</label>
-            <div className="flex flex-wrap items-center gap-3">
-              <input
-                type="number"
-                value={formData.ram_valeur}
-                onChange={(e) => handleChange('ram_valeur', e.target.value)}
-                placeholder="Ex: 16"
-                className="w-24 sm:w-32 px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-              />
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
-                  <input
-                    type="radio"
-                    name="ram_unite"
-                    value="Go"
-                    checked={formData.ram_unite === 'Go'}
-                    onChange={(e) => handleChange('ram_unite', e.target.value)}
-                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                  /> Go
-                </label>
-                <label className="flex items-center gap-1 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
-                  <input
-                    type="radio"
-                    name="ram_unite"
-                    value="Mo"
-                    checked={formData.ram_unite === 'Mo'}
-                    onChange={(e) => handleChange('ram_unite', e.target.value)}
-                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                  /> Mo
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Stockage */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Stockage</label>
-            <div className="flex flex-wrap items-center gap-3">
-              <input
-                type="number"
-                value={formData.stockage_valeur}
-                onChange={(e) => handleChange('stockage_valeur', e.target.value)}
-                placeholder="Ex: 512"
-                className="w-24 sm:w-32 px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-              />
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
-                  <input
-                    type="radio"
-                    name="stockage_unite"
-                    value="Go"
-                    checked={formData.stockage_unite === 'Go'}
-                    onChange={(e) => handleChange('stockage_unite', e.target.value)}
-                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                  /> Go
-                </label>
-                <label className="flex items-center gap-1 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
-                  <input
-                    type="radio"
-                    name="stockage_unite"
-                    value="Mo"
-                    checked={formData.stockage_unite === 'Mo'}
-                    onChange={(e) => handleChange('stockage_unite', e.target.value)}
-                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                  /> Mo
-                </label>
-                <label className="flex items-center gap-1 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
-                  <input
-                    type="radio"
-                    name="stockage_unite"
-                    value="TB"
-                    checked={formData.stockage_unite === 'TB'}
-                    onChange={(e) => handleChange('stockage_unite', e.target.value)}
-                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                  /> TB
-                </label>
-              </div>
-            </div>
-          </div>
+      {/* Date et prix d'acquisition */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+            {t('assets.fieldDateAcquisition')} <span className="text-danger">*</span>
+          </label>
+          <input
+            type="date"
+            value={formData.date_acquisition}
+            onChange={(e) => handleChange('date_acquisition', e.target.value)}
+            className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${fieldErrors.date_acquisition ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+          />
+          {fieldErrors.date_acquisition && <span className="text-sm text-danger mt-1">{fieldErrors.date_acquisition}</span>}
         </div>
-      );
-    }
-
-    return (
-      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-blue-700 dark:text-blue-300 text-center text-sm sm:text-base">
-        <span className="inline-flex items-center gap-2"><AppIcon icon={CheckCircleIcon} size="sm" /> Aucune information spécifique requise pour ce type de bien</span>
-      </div>
-    );
-  };
-
-  // ============================================================
-  // RENDER : Confirmation
-  // ============================================================
-  const renderConfirmation = () => {
-    const compteCredit = formData.mode_paiement === 'credit' ? '481' : '512';
-    const compteDebit = { vehicule: '2445', machine: '2441', ordinateur: '2443' }[formData.type_bien] || '2440';
-    const localisationNom = localisations.find(l => String(l.id_localisation) === String(formData.id_localisation))?.nom_localisation || '—';
-
-    // Formater RAM et Stockage pour l'affichage
-    const ramDisplay = formData.ram_valeur ? `${formData.ram_valeur} ${formData.ram_unite}` : '—';
-    const stockageDisplay = formData.stockage_valeur ? `${formData.stockage_valeur} ${formData.stockage_unite}` : '—';
-
-    return (
-      <div className="space-y-4">
-        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 inline-flex items-center gap-2"><AppIcon icon={ClipboardDocumentListIcon} size="md" /> Récapitulatif du bien</h3>
-        <div className="bg-gray-50 dark:bg-night-active rounded-xl p-3 sm:p-4 divide-y divide-border-light dark:divide-border-dark">
-          <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Type :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base break-words">{TYPE_OPTIONS.find(t => t.value === formData.type_bien)?.label || formData.type_bien}</span></div>
-          <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Date acquisition :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{new Date(formData.date_acquisition).toLocaleDateString('fr-FR')}</span></div>
-          <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Prix :</span><span className="text-gray-900 dark:text-slate-100 font-semibold text-sm sm:text-base">{parseInt(formData.prix_acquisition || 0).toLocaleString()} USD</span></div>
-          <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">État :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{ETAT_OPTIONS.find(e => e.value === formData.etat)?.label}</span></div>
-          <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Localisation :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{localisationNom}</span></div>
-          <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Mode de paiement :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.mode_paiement === 'credit' ? 'Crédit' : 'Comptant'}</span></div>
-          {formData.fournisseur_id && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Fournisseur :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">ID #{formData.fournisseur_id}</span></div>}
-          
-          {/* Afficher les champs spécifiques selon le type */}
-          {formData.type_bien === 'vehicule' && (
-            <>
-              {formData.marque && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Marque :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.marque}</span></div>}
-              {formData.modele && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Modèle :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.modele}</span></div>}
-              {formData.immatriculation && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Immatriculation :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.immatriculation}</span></div>}
-            </>
-          )}
-          
-          {formData.type_bien === 'machine' && (
-            <>
-              {formData.fabricant && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Fabricant :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.fabricant}</span></div>}
-              {formData.puissance && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Puissance :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.puissance} kW</span></div>}
-              {composants.length > 0 && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Composants :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{composants.length} composant(s)</span></div>}
-            </>
-          )}
-          
-          {formData.type_bien === 'ordinateur' && (
-            <>
-              {formData.marque && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Marque :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.marque}</span></div>}
-              {formData.processeur && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Processeur :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.processeur}</span></div>}
-              {formData.ram_valeur && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">RAM :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{ramDisplay}</span></div>}
-              {formData.stockage_valeur && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Stockage :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{stockageDisplay}</span></div>}
-            </>
-          )}
-
-          {formData.description && <div className="flex flex-col sm:flex-row py-2.5"><span className="w-full sm:w-36 font-medium text-gray-600 dark:text-slate-400 text-sm">Désignation :</span><span className="text-gray-900 dark:text-slate-100 text-sm sm:text-base">{formData.description}</span></div>}
-          
-          <div className="pt-4 mt-2 border-t-2 border-primary-200 dark:border-primary-800">
-            <div className="text-sm font-semibold text-primary-700 dark:text-primary-300 mb-2">📊 Écriture comptable générée</div>
-            <div className="flex flex-col sm:flex-row justify-between py-1 text-sm"><span className="text-gray-600 dark:text-slate-400">Débit :</span><span className="font-medium text-gray-900 dark:text-slate-100">{compteDebit} (Immobilisation)</span></div>
-            <div className="flex flex-col sm:flex-row justify-between py-1 text-sm"><span className="text-gray-600 dark:text-slate-400">Crédit :</span><span className="font-medium text-gray-900 dark:text-slate-100">{compteCredit} ({formData.mode_paiement === 'credit' ? 'Fournisseur' : 'Banque'})</span></div>
-            <div className="flex flex-col sm:flex-row justify-between py-1 text-sm"><span className="text-gray-600 dark:text-slate-400">Montant :</span><span className="font-medium text-gray-900 dark:text-slate-100">{parseInt(formData.prix_acquisition || 0).toLocaleString()} USD</span></div>
-            <div className="flex flex-col sm:flex-row justify-between py-1 text-sm"><span className="text-gray-600 dark:text-slate-400">Statut :</span><span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">BROUILLON (à valider)</span></div>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+            {t('assets.fieldPrixAcquisition')} <span className="text-danger">*</span>
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={formData.prix_acquisition}
+            onChange={(e) => handleChange('prix_acquisition', e.target.value)}
+            className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${fieldErrors.prix_acquisition ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+            placeholder="Ex: 45000.00"
+          />
+          {fieldErrors.prix_acquisition && <span className="text-sm text-danger mt-1">{fieldErrors.prix_acquisition}</span>}
         </div>
       </div>
-    );
-  };
 
-  const SuccessDialog = () => (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4">
-      <div className="bg-white dark:bg-surface-dark rounded-xl shadow-2xl max-w-md w-full mx-auto p-4 sm:p-6">
-        <div className="text-center">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AppIcon icon={CheckCircleIcon} size="lg" className="text-success dark:text-green-400" />
-          </div>
-          <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-slate-100 mb-2">{t('assets.bienCreated')}</h3>
-          <p className="text-sm text-gray-600 dark:text-slate-400">{t('assets.bienCreatedDesc')}</p>
-          <div className="mt-4 p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg text-left">
-            <p className="text-sm font-medium text-primary-700 dark:text-primary-300">📝 {t('assets.ecritureAcquisitionGenered')}</p>
-            <p className="text-xs text-gray-600 dark:text-slate-400 mt-1">{t('assets.ecritureAcquisitionDetail')}</p>
-          </div>
-          <button onClick={() => navigate('/biens')} className="mt-4 w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm sm:text-base">
-            {t('common.continue')}
+      {/* État - Nouvelle liste d'options */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+          {t('assets.fieldEtat')} <span className="text-danger">*</span>
+        </label>
+        <select
+          value={formData.etat}
+          onChange={(e) => handleChange('etat', e.target.value)}
+          className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+        >
+          <option value="NEUF">Neuf</option>
+          <option value="BON">Bon</option>
+          <option value="USAGE">Usagé</option>
+          <option value="PANNE">En Panne</option>
+          <option value="MAINTENANCE">En Maintenance</option>
+          <option value="EN_TEST">En Test</option>
+          <option value="REFORME">Réformé</option>
+        </select>
+      </div>
+
+      {/* Mode de paiement */}
+      <ModePaiementSelector
+        mode={formData.mode_paiement}
+        onChange={(val) => handleChange('mode_paiement', val)}
+        errors={fieldErrors}
+      />
+    </div>
+  );
+
+  // ============================================================
+  // RENDU : ÉTAPE 2 - FOURNISSEUR & LOCALISATION
+  // ============================================================
+  const renderStep2 = () => (
+    <div className="space-y-4 sm:space-y-5">
+      {/* Fournisseur */}
+      <FournisseurAutocomplete
+        value={formData.fournisseur_id}
+        onChange={(val) => handleChange('fournisseur_id', val)}
+        errors={fieldErrors}
+      />
+
+      {/* Localisation */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+          {t('assets.fieldLocalisation')} <span className="text-danger">*</span>
+        </label>
+        <div className="relative flex items-center">
+          <select
+            value={formData.id_localisation || ''}
+            onChange={(e) => handleChange('id_localisation', parseInt(e.target.value) || '')}
+            className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${fieldErrors.id_localisation ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
+            disabled={localisationsLoading}
+          >
+            <option value="">Sélectionnez une localisation...</option>
+            {localisations.map((loc) => (
+              <option key={loc.id_localisation} value={loc.id_localisation}>
+                {loc.nom_localisation}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="absolute right-1.5 p-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-md transition-colors"
+            onClick={() => setShowNewLocalisation(true)}
+            title="Ajouter une localisation"
+          >
+            <AppIcon icon={PlusIcon} size="sm" />
           </button>
         </div>
+        {fieldErrors.id_localisation && <span className="text-sm text-danger mt-1">{fieldErrors.id_localisation}</span>}
+        {localisationsLoading && <span className="text-sm text-gray-500 dark:text-slate-400 mt-1">Chargement des localisations...</span>}
       </div>
     </div>
   );
 
+  // ============================================================
+  // RENDU : ÉTAPE 3 - CHAMPS SPÉCIFIQUES
+  // ============================================================
+  const renderStep3 = () => {
+    if (!selectedType) {
+      return (
+        <div className="text-center py-8">
+          <ExclamationTriangleIcon className="w-12 h-12 text-warning-500 mx-auto mb-3" />
+          <p className="text-gray-600 dark:text-slate-400">
+            Veuillez sélectionner un type de bien à l'étape 1 pour voir les caractéristiques spécifiques.
+          </p>
+        </div>
+      );
+    }
+
+    if (!dynamicFields || dynamicFields.length === 0) {
+      return (
+        <div className="text-center py-8">
+          <CheckCircleIcon className="w-12 h-12 text-success-500 mx-auto mb-3" />
+          <p className="text-gray-700 dark:text-slate-300 font-medium">
+            Ce type de bien (<span className="text-primary-600 dark:text-primary-400">{selectedType.libelle}</span>) ne possède pas de caractéristiques spécifiques obligatoires.
+          </p>
+          <p className="text-sm text-gray-500 dark:text-slate-500 mt-1">
+            Vous pouvez finaliser et créer votre bien directement.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4 sm:space-y-5">
+        <div className="bg-primary-50 dark:bg-primary-900/20 rounded-xl p-4 border border-primary-200 dark:border-primary-800">
+          <h3 className="font-semibold text-gray-900 dark:text-slate-100 text-base mb-1">
+            Spécifications pour {selectedType.libelle}
+          </h3>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">
+            Renseignez les attributs techniques et caractéristiques propres à ce type d'équipement.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {dynamicFields.map((champ) => (
+            <div key={champ.nom} className={champ.type === 'textarea' ? 'sm:col-span-2' : ''}>
+              <ChampDynamique
+                champ={champ}
+                value={formData.attributs_specifiques?.[champ.nom] ?? ''}
+                onChange={handleDynamicFieldChange}
+                error={fieldErrors[`attr_${champ.nom}`]}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // ============================================================
+  // RENDU PRINCIPAL
+  // ============================================================
   return (
-    <div className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <button className="p-2 hover:bg-gray-100 dark:hover:bg-night-hover rounded-lg transition-colors" onClick={() => navigate('/biens')}>
-          <AppIcon icon={ArrowLeftIcon} size="md" className="text-gray-600 dark:text-slate-400" />
+    <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      {/* En-tête avec bouton Configurer inventaire */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+        <div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">
+              {t('assets.addNewAsset')}
+            </h1>
+            <button
+              type="button"
+              onClick={() => setShowConfigInventaire(true)}
+              className="text-sm text-primary-600 hover:underline"
+            >
+              Configurer numéro d'inventaire
+            </button>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-slate-400">
+            {t('assets.addAssetDescription')}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleCancel}
+          className="inline-flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-50 dark:hover:bg-night-hover transition-colors"
+        >
+          <ArrowLeftIcon className="w-4 h-4" />
+          {t('common.back')}
         </button>
-        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-slate-100 inline-flex items-center gap-2">
-          <AppIcon icon={PlusIcon} size="sm" /> Ajouter un bien
-        </h1>
       </div>
 
-      {/* Stepper */}
-      <div className="flex justify-between mb-4 sm:mb-6 bg-white dark:bg-surface-dark rounded-xl p-3 sm:p-4 shadow-card overflow-x-auto">
-        {steps.map((label, index) => (
-          <div key={index} className="flex-1 text-center relative min-w-[60px] sm:min-w-[80px]">
-            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center mx-auto mb-1 font-semibold text-xs sm:text-sm transition-colors ${activeStep === index ? 'bg-primary-600 text-white' : activeStep > index ? 'bg-success text-white' : 'bg-gray-200 dark:bg-night-muted text-gray-500 dark:text-slate-400'}`}>
-              {activeStep > index ? <AppIcon icon={CheckCircleIcon} size="xs" /> : index + 1}
-            </div>
-            <div className={`text-[10px] sm:text-xs font-medium truncate ${activeStep === index ? 'text-primary-600 dark:text-primary-400' : activeStep > index ? 'text-success' : 'text-gray-500 dark:text-slate-400'}`}>{label}</div>
+      {/* Indicateur d'étapes */}
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
+        {steps.map((s, index) => (
+          <React.Fragment key={s.id}>
+            <button
+              type="button"
+              onClick={() => {
+                // Permettre de naviguer seulement vers les étapes précédentes ou l'étape courante
+                if (s.id <= step) {
+                  setStep(s.id);
+                }
+              }}
+              className={`flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors ${s.id === step
+                ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                : s.id < step
+                  ? 'text-success-600 dark:text-success-400 hover:bg-gray-100 dark:hover:bg-night-hover'
+                  : 'text-gray-400 dark:text-slate-500 cursor-not-allowed'
+                }`}
+              disabled={s.id > step}
+            >
+              <span className={`text-sm font-medium ${s.id === step ? 'text-primary-600 dark:text-primary-400' : ''}`}>
+                {s.id < step ? <CheckCircleIcon className="w-4 h-4 text-success-500" /> : s.icon}
+              </span>
+              <span className="text-xs sm:text-sm font-medium hidden xs:inline">{s.label}</span>
+            </button>
             {index < steps.length - 1 && (
-              <div className={`absolute top-3.5 left-[calc(50%+14px)] w-[calc(100%-28px)] h-0.5 hidden sm:block ${activeStep > index ? 'bg-success' : 'bg-gray-200 dark:bg-night-muted'}`} />
+              <div className={`flex-1 h-0.5 mx-1 sm:mx-2 ${s.id < step ? 'bg-success-500' : 'bg-gray-200 dark:bg-night-muted'}`} />
             )}
-          </div>
+          </React.Fragment>
         ))}
       </div>
 
+      {/* Erreur générale */}
+      {error && (
+        <div className="mb-4 p-3 sm:p-4 bg-red-50 dark:bg-red-900/20 border border-danger rounded-lg flex items-start gap-2 sm:gap-3">
+          <ExclamationTriangleIcon className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+          <span className="text-sm text-danger dark:text-red-400">
+            {typeof error === 'object' ? JSON.stringify(error) : error}
+          </span>
+        </div>
+      )}
+
       {/* Formulaire */}
-      <div className="bg-white dark:bg-surface-dark rounded-xl p-4 sm:p-6 shadow-card">
-        {submitError && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-danger text-danger rounded text-sm">
-            <div className="flex items-start gap-2">
-              <AppIcon icon={ExclamationTriangleIcon} size="sm" className="mt-0.5 text-danger" />
-              <span>{submitError}</span>
-            </div>
-          </div>
-        )}
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-card p-4 sm:p-6">
+        {/* Étape 1 */}
+        {step === 1 && renderStep1()}
 
-        {/* Étape 0 - Informations générales */}
-        {activeStep === 0 && (
-          <div className="space-y-3 sm:space-y-4">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100">📋 Informations d'acquisition</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Type de bien <span className="text-danger">*</span></label>
-                <select value={formData.type_bien} onChange={(e) => handleChange('type_bien', e.target.value)} className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.type_bien ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}>
-                  <option value="">Sélectionnez un type</option>
-                  {TYPE_OPTIONS.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
-                </select>
-                {errors.type_bien && <span className="text-sm text-danger mt-1">{errors.type_bien}</span>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Date d'acquisition <span className="text-danger">*</span></label>
-                <input type="date" value={formData.date_acquisition} onChange={(e) => handleChange('date_acquisition', e.target.value)} className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.date_acquisition ? 'border-danger' : 'border-border-light dark:border-border-dark'}`} />
-                {errors.date_acquisition && <span className="text-sm text-danger mt-1">{errors.date_acquisition}</span>}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Prix d'acquisition (USD)</label>
-                <input type="number" value={formData.prix_acquisition} onChange={(e) => handleChange('prix_acquisition', e.target.value)} placeholder="Ex: 25000000" className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.prix_acquisition ? 'border-danger' : 'border-border-light dark:border-border-dark'} ${isMachineProduction ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : ''}`} disabled={isMachineProduction} readOnly={isMachineProduction} />
-                {isMachineProduction && <span className="text-xs text-gray-500 dark:text-slate-400">Calculé automatiquement</span>}
-                {errors.prix_acquisition && <span className="text-sm text-danger mt-1">{errors.prix_acquisition}</span>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">État <span className="text-danger">*</span></label>
-                <select value={formData.etat} onChange={(e) => handleChange('etat', e.target.value)} className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors">
-                  {ETAT_OPTIONS.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
-                </select>
-              </div>
-            </div>
+        {/* Étape 2 */}
+        {step === 2 && renderStep2()}
 
-            <ModePaiementSelector mode={formData.mode_paiement} onChange={(mode) => { handleChange('mode_paiement', mode); if (mode === 'comptant') handleChange('fournisseur_id', null); }} errors={errors} />
-
-            {formData.mode_paiement === 'credit' && (
-              <FournisseurAutocomplete value={formData.fournisseur_id} onChange={(id) => handleChange('fournisseur_id', id)} errors={errors} />
-            )}
-
-            <div className="p-3 bg-gray-50 dark:bg-night-active rounded-lg text-sm">
-              <span className="text-gray-600 dark:text-slate-400">💡 Compte crédit utilisé :</span>
-              <span className="ml-2 font-semibold text-primary-700 dark:text-primary-300">{formData.mode_paiement === 'credit' ? '481 (Fournisseur)' : '512 (Banque)'}</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Localisation <span className="text-danger">*</span></label>
-                <div className="flex gap-2">
-                  <select value={formData.id_localisation} onChange={(e) => handleChange('id_localisation', e.target.value)} className={`flex-1 px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.id_localisation ? 'border-danger' : 'border-border-light dark:border-border-dark'}`} disabled={localisationsLoading}>
-                    <option value="">{localisationsLoading ? 'Chargement...' : 'Sélectionnez une localisation'}</option>
-                    {localisations.map((loc) => (<option key={loc.id_localisation} value={String(loc.id_localisation)}>{loc.nom_localisation}</option>))}
-                  </select>
-                  <button type="button" className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center justify-center shrink-0" onClick={() => setShowLocalisationModal(true)} title="Ajouter une localisation">
-                    <AppIcon icon={PlusIcon} size="sm" />
-                  </button>
-                </div>
-                {errors.id_localisation && <span className="text-sm text-danger mt-1">{errors.id_localisation}</span>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Date fin de garantie</label>
-                <input type="date" value={formData.date_fin_garantie} onChange={(e) => handleChange('date_fin_garantie', e.target.value)} className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Désignation</label>
-              <textarea rows="3" value={formData.description} onChange={(e) => handleChange('description', e.target.value)} className="w-full px-3 py-2 text-sm sm:text-base border border-border-light dark:border-border-dark rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" placeholder="Désignation de l'actif..." />
-            </div>
-          </div>
-        )}
-
-        {/* Étape 1 - Champs spécifiques */}
-        {activeStep === 1 && renderSpecificFields()}
-
-        {/* Étape 2 - Confirmation */}
-        {activeStep === 2 && renderConfirmation()}
+        {/* Étape 3 */}
+        {step === 3 && renderStep3()}
 
         {/* Boutons de navigation */}
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-6 pt-4 border-t border-border-light dark:border-border-dark">
-          <button className="px-4 py-2 bg-gray-100 dark:bg-night-muted text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-night-hover rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto order-2 sm:order-1" onClick={handleBack} disabled={activeStep === 0}>
-            ← Retour
-          </button>
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto order-1 sm:order-2">
-            {activeStep === 2 ? (
-              <button className="px-6 py-2 bg-success hover:bg-success/90 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 w-full sm:w-auto" onClick={handleSubmit} disabled={submitting}>
-                {submitting ? 'Création en cours...' : (<><AppIcon icon={CheckCircleIcon} size="sm" className="text-white" /> Enregistrer</>)}
-              </button>
-            ) : (
-              <button className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors w-full sm:w-auto" onClick={handleNext}>
-                Suivant →
+          <div>
+            {step > 1 && (
+              <button
+                type="button"
+                onClick={prevStep}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-50 dark:hover:bg-night-hover transition-colors w-full sm:w-auto"
+              >
+                <ArrowLeftIcon className="w-4 h-4" />
+                {t('common.previous')}
               </button>
             )}
-            <button className="px-4 py-2 border border-border-light dark:border-border-dark hover:bg-gray-100 dark:hover:bg-night-hover rounded-lg transition-colors w-full sm:w-auto" onClick={() => navigate('/biens')}>
-              Annuler
-            </button>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            {step < 3 ? (
+              <button
+                type="button"
+                onClick={nextStep}
+                className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors w-full sm:w-auto"
+              >
+                {t('common.next')}
+                <span className="text-lg">→</span>
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-success-600 hover:bg-success-700 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto"
+              >
+                {submitting ? (
+                  <>
+                    <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    {t('common.saving')}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon className="w-4 h-4" />
+                    {t('common.save')}
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
-      </div>
+      </form>
 
-      {/* Modales */}
-      <LocalisationModal isOpen={showLocalisationModal} onClose={() => setShowLocalisationModal(false)} onSave={handleCreateLocalisation} existingNames={localisations.map(loc => loc.nom_localisation)} />
-      
+      {/* Modals de création rapide */}
       <ModalAjoutSimple
-        isOpen={showAddMarqueModal}
-        title="Ajouter une marque"
+        isOpen={showNewMarque}
+        title="Nouvelle marque"
         label="Nom de la marque"
-        onClose={() => setShowAddMarqueModal(false)}
-        onSave={handleAddMarque}
-      />
-      <ModalAjoutSimple
-        isOpen={showAddModeleModal}
-        title="Ajouter un modèle"
-        label="Nom du modèle"
-        onClose={() => setShowAddModeleModal(false)}
-        onSave={handleAddModele}
-      />
-      <ModalAjoutSimple
-        isOpen={showAddFabricantModal}
-        title="Ajouter un fabricant"
-        label="Nom du fabricant"
-        onClose={() => setShowAddFabricantModal(false)}
-        onSave={handleAddFabricant}
-      />
-      <ModalAjoutSimple
-        isOpen={showAddProcesseurModal}
-        title="Ajouter un processeur"
-        label="Nom du processeur"
-        onClose={() => setShowAddProcesseurModal(false)}
-        onSave={handleAddProcesseur}
+        value={newMarqueValue}
+        onChange={setNewMarqueValue}
+        onSave={() => handleQuickAdd('marque', newMarqueValue, setMarqueOptions)}
+        onClose={() => { setShowNewMarque(false); setNewMarqueValue(''); }}
+        existingValues={marqueOptions}
       />
 
-      {showSuccessDialog && <SuccessDialog />}
+      <ModalAjoutSimple
+        isOpen={showNewModele}
+        title="Nouveau modèle"
+        label="Nom du modèle"
+        value={newModeleValue}
+        onChange={setNewModeleValue}
+        onSave={() => handleQuickAdd('modele', newModeleValue, setModeleOptions)}
+        onClose={() => { setShowNewModele(false); setNewModeleValue(''); }}
+        existingValues={modeleOptions}
+      />
+
+      <ModalAjoutSimple
+        isOpen={showNewFabricant}
+        title="Nouveau fabricant"
+        label="Nom du fabricant"
+        value={newFabricantValue}
+        onChange={setNewFabricantValue}
+        onSave={() => handleQuickAdd('fabricant', newFabricantValue, setFabricantOptions)}
+        onClose={() => { setShowNewFabricant(false); setNewFabricantValue(''); }}
+        existingValues={fabricantOptions}
+      />
+
+      <ModalAjoutSimple
+        isOpen={showNewProcesseur}
+        title="Nouveau processeur"
+        label="Nom du processeur"
+        value={newProcesseurValue}
+        onChange={setNewProcesseurValue}
+        onSave={() => handleQuickAdd('processeur', newProcesseurValue, setProcesseurOptions)}
+        onClose={() => { setShowNewProcesseur(false); setNewProcesseurValue(''); }}
+        existingValues={processeurOptions}
+      />
+
+      <LocalisationModal
+        isOpen={showNewLocalisation}
+        onClose={() => { setShowNewLocalisation(false); setNewLocalisationValue(''); }}
+        onSave={handleQuickAddLocalisation}
+        existingNames={localisations.map(l => l.nom_localisation)}
+      />
+
+      {/* Modal Nouveau Type de Bien */}
+      <TypeBienModal
+        isOpen={showNewTypeBien}
+        onClose={() => setShowNewTypeBien(false)}
+        onSave={handleQuickAddTypeBien}
+        existingNames={typesBiens.map(t => t.libelle)}
+      />
+
+      {/* Modal de configuration inventaire */}
+      <ConfigInventaireModal
+        isOpen={showConfigInventaire}
+        onClose={() => setShowConfigInventaire(false)}
+        onSave={() => {
+          // Optionnel : rafraîchir ou afficher un message
+        }}
+      />
+
+      {/* Dialog de confirmation d'annulation */}
+      <ConfirmDialog
+        open={showConfirmDialog}
+        title={t('common.confirmCancel')}
+        content={t('assets.confirmCancelContent')}
+        onConfirm={confirmCancel}
+        onCancel={() => setShowConfirmDialog(false)}
+        confirmLabel={t('common.confirm')}
+        cancelLabel={t('common.cancel')}
+        variant="warning"
+      />
     </div>
   );
 };

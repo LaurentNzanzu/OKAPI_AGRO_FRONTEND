@@ -262,29 +262,35 @@ const authService = {
   restoreSession: async () => {
     /**
      * Tente de restaurer la session depuis le cookie Refresh Token.
-     * Utilisé lorsque sessionStorage est vide mais que le cookie est présent.
+     * Utilisé lorsque l'access_token est expiré ou absent mais que le cookie refresh est présent.
      */
     try {
-      const response = await api.get('/auth/me');
+      // 1. Tenter d'abord de rafraîchir le token via le refresh token (cookie HttpOnly)
+      const refreshResult = await authService.refreshToken();
       
-      if (response.data) {
-        const { session_uuid, ...userData } = response.data;
-        
-        // Générer un nouvel access token via /refresh
-        const refreshResult = await authService.refreshToken();
-        
-        if (refreshResult.success) {
-          return { 
-            success: true, 
-            data: {
-              user: userData,
-              session_uuid: session_uuid,
-            }
-          };
-        }
+      if (!refreshResult.success) {
+        return { 
+          success: false, 
+          error: refreshResult.error || 'Impossible de restaurer la session' 
+        };
+      }
+
+      // 2. Une fois le nouvel access token obtenu, récupérer les infos de l'utilisateur
+      const userResult = await authService.getCurrentUser();
+      if (userResult.success) {
+        return { 
+          success: true, 
+          data: {
+            user: userResult.data,
+            session_uuid: authService.getSessionUuid(),
+          }
+        };
       }
       
-      return { success: false, error: 'Impossible de restaurer la session' };
+      return { 
+        success: false, 
+        error: userResult.error || 'Impossible de récupérer le profil utilisateur' 
+      };
     } catch (error) {
       return {
         success: false,

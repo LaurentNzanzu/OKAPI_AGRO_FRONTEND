@@ -63,8 +63,18 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Si l'erreur est 401 et que la requête n'a pas encore été retentée
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // 1. Si pas de réponse du serveur (Network Error, reboot backend, ECONNREFUSED) :
+    // On ne déconnecte PAS l'utilisateur et on ne vide pas ses tokens !
+    if (!error.response) {
+      console.warn('[API] Serveur inaccessible ou en cours de redémarrage. Session préservée.');
+      return Promise.reject(error);
+    }
+
+    // 2. Vérifier si la requête concernait déjà l'authentification (/login, /refresh)
+    const isAuthEndpoint = originalRequest?.url?.includes('/auth/login') || originalRequest?.url?.includes('/auth/refresh');
+
+    // 3. Si l'erreur est 401 et qu'il ne s'agit pas d'un endpoint d'auth et que la requête n'a pas encore été retentée
+    if (error.response.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       // Sur les pages publiques, ne pas tenter de refresh
       if (isPublicRoute(window.location.pathname)) {
         return Promise.reject(error);
@@ -72,39 +82,37 @@ api.interceptors.response.use(
 
       originalRequest._retry = true;
 
-      // Vérifier si le token est effectivement expiré
-      if (authService.isTokenExpired()) {
-        try {
-          // Utiliser un mécanisme de verrouillage pour éviter les appels concurrents
-          if (!refreshPromise) {
-            refreshPromise = authService.refreshToken()
-              .then((result) => {
-                if (!result.success) {
-                  throw new Error(result.error);
-                }
-                return result;
-              })
-              .finally(() => {
-                refreshPromise = null;
-              });
-          }
-
-          await refreshPromise;
-
-          // Réessayer la requête originale avec le nouveau token
-          const newAccessToken = authService.getAccessToken();
-          if (newAccessToken) {
-            originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-          }
-          
-          return api(originalRequest);
-        } catch (refreshError) {
-          // Refresh échoué : redirection vers login
-          if (!isPublicRoute(window.location.pathname)) {
-            window.location.href = '/login';
-          }
-          return Promise.reject(refreshError);
+      try {
+        if (!refreshPromise) {
+          refreshPromise = authService.refreshToken()
+            .then((result) => {
+              if (!result.success) {
+                throw new Error(result.error || 'Échec du rafraîchissement');
+              }
+              return result;
+            })
+            .finally(() => {
+              refreshPromise = null;
+            });
         }
+
+        await refreshPromise;
+
+        // Réessayer la requête originale avec le nouveau token
+        const newAccessToken = authService.getAccessToken();
+        if (newAccessToken) {
+          originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+        }
+
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Refresh échoué définitivement → nettoyage et redirection
+        refreshPromise = null;
+        authService.clearTokens();
+        if (!isPublicRoute(window.location.pathname)) {
+          window.location.href = '/login';
+        }
+        return Promise.reject(refreshError);
       }
     }
 
