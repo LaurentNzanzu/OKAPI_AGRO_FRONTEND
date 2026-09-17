@@ -63,6 +63,8 @@ import {
   UserPlusIcon,
   ArrowRightOnRectangleIcon,
   QrCodeIcon,
+  FolderOpenIcon,
+  AdjustmentsHorizontalIcon,
 } from '@heroicons/react/24/outline';
 
 /** Tailles cohérentes dans toute l'application */
@@ -241,4 +243,6 @@ export {
   CreditCardIcon,
   UserPlusIcon,
   QrCodeIcon,
+  FolderOpenIcon,
+  AdjustmentsHorizontalIcon,
 };

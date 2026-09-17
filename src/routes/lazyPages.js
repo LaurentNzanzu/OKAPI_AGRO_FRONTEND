@@ -107,3 +107,18 @@ export const GestionEtats = lazy(() => import('../components/etats/GestionEtats'
 export const CaissePage = lazy(() => import('../pages/CaissePage'));
 
 export const ConcertationsTab = lazy(() => import('../components/concertations/ConcertationsTab'));
+
+
+// === SPRINT 0 — SaaS / Multi-tenant ===
+export const ListeOrganisations = lazy(() => import('../components/organisations/ListeOrganisations'));
+export const FicheOrganisation = lazy(() => import('../components/organisations/FicheOrganisation'));
+export const GestionAbonnements = lazy(() => import('../components/abonnements/GestionAbonnements'));
+export const ListeFactures = lazy(() => import('../components/facturation/ListeFactures'));
+export const ListeProjets = lazy(() => import('../components/projets/ListeProjets'));
+export const FicheProjet = lazy(() => import('../components/projets/FicheProjet'));
+export const GestionWorkflow = lazy(() => import('../components/workflow/GestionWorkflow'));
+export const NouvelleOrganisation = lazy(() => import('../components/organisations/NouvelleOrganisation'));
+export const NouveauProjet = lazy(() => import('../components/projets/NouveauProjet'));
+export const ListePermissions = lazy(() => import('../components/permissions/ListePermissions'));
+export const GestionPermissionsRole = lazy(() => import('../components/permissions/GestionPermissionsRole'));
+export const ImportCSV = lazy(() => import('../components/import/ImportCSV'));
