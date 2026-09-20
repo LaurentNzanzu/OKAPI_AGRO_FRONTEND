@@ -3,10 +3,10 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
-import AppPage from '../common/AppPage';
-import Card from '../common/Card';
-import Button from '../common/Button';
-import Input from '../common/Input';
+import AppPage from '../ui/AppPage';
+import Card from '../ui/Card';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
 import PageLoader from '../common/PageLoader';
 import {
   AdjustmentsHorizontalIcon,
@@ -15,7 +15,7 @@ import {
   TrashIcon,
   CheckCircleIcon,
   XCircleIcon,
-} from '../common/icons';
+} from '../ui/icons';
 
 const TYPES_WORKFLOW = ['MISSION', 'RAVITAILLEMENT', 'INCIDENT'];
 

@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from '../../context/LanguageContext';
 import abonnementsService from '../../services/abonnements';
-import Button from '../common/Button';
-import Input from '../common/Input';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
 
 const PLANS = ['BASIC', 'PRO', 'ENTERPRISE'];
 
