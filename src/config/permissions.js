@@ -20,6 +20,18 @@ export const ROLE_PERMISSIONS = {
     'plan_comptable.create',
     'plan_comptable.update',
     'plan_comptable.delete',
+    'organisation.gerer',
+    'organisation.voir',
+    'abonnement.gerer',
+    'abonnement.voir',
+    'facturation.gerer',
+    'facturation.voir',
+    'projet.gerer',
+    'projet.voir',
+    'workflow.gerer',
+    'workflow.voir',
+    'import.executer',
+    
   ],
   DG: [
     'dashboard.view',
@@ -44,8 +56,11 @@ export const ROLE_PERMISSIONS = {
     'audit.view',
     'biens.sortie.validate',
     'maintenance.budget.final_validate',
-    // ✅ Plan comptable - Consultation uniquement
     'plan_comptable.view',
+    'projet.voir',
+    'abonnement.voir',
+    'facturation.voir',
+    'workflow.voir',
   ],
   COMPTABLE: [
     'dashboard.view',
@@ -144,6 +159,20 @@ export const ROLE_PERMISSIONS = {
     'notifications.history.view',
     // ❌ Pas d'accès au plan comptable
   ],
+    RESPONSABLE_PROJET: [
+    'dashboard.view',
+    'projet.voir',
+    'workflow.voir',
+    'notifications.view',
+    'notifications.history.view',
+  ],
+  LOGISTICIEN: [
+    'dashboard.view',
+    'projet.voir',
+    'workflow.voir',
+    'notifications.view',
+    'notifications.history.view',
+  ],
 };
 
 /** Mapping route → permission minimale requise */
@@ -204,6 +233,19 @@ export const ROUTE_PERMISSIONS = {
   '/profil': 'dashboard.view',
   '/parametres': 'dashboard.view',
   '/prints/fiche-bien': 'biens.view',
+    // === SPRINT 0 — SaaS / Multi-tenant ===
+  '/organisations': 'organisation.voir',
+  '/organisations/nouveau': 'organisation.gerer',
+  '/abonnements': 'abonnement.voir',
+  '/facturation': 'facturation.voir',
+  '/projets': 'projet.voir',
+  '/projets/nouveau': 'projet.gerer',
+  '/workflow': 'workflow.voir',
+  '/organisations/nouveau': 'organisation.gerer',
+  '/projets/nouveau': 'projet.gerer',
+  '/permissions': 'permission.gerer',
+  '/permissions/roles': 'permission.gerer',
+  '/import': 'import.executer',
 };
 
 const PUBLIC_ROUTES = new Set([
@@ -268,7 +310,7 @@ export const ROLE_HOME_PATHS = {
   TECHNICIEN: ['/dashboard', '/pannes/mes-pannes', '/maintenances/planning'],
   COMPTABLE: ['/dashboard', '/biens', '/amortissements', '/plan-comptable'],
   DG: ['/dashboard', '/rapports/financiers', '/validations'],
-  ADMIN: ['/dashboard', '/utilisateurs', '/plan-comptable'],
+  ADMIN: ['/dashboard', '/organisations', '/utilisateurs', '/plan-comptable'],
 };
 
 export function userHasPermission(user, permission) {
@@ -376,6 +418,19 @@ export function resolveRoutePermission(pathname) {
   if (pathname.startsWith('/budgets')) return 'validations.view';
   if (pathname.startsWith('/rapports/')) return 'rapports.view';
   if (pathname.startsWith('/etats')) return 'rapports.view';
+
+    // === SPRINT 0 — Routes dynamiques SaaS ===
+  if (pathname.startsWith('/organisations/') && pathname.endsWith('/edit')) return 'organisation.gerer';
+  if (pathname.match(/^\/organisations\/[^/]+$/)) return 'organisation.voir';
+  if (pathname.startsWith('/organisations')) return 'organisation.voir';
+  if (pathname.startsWith('/abonnements')) return 'abonnement.voir';
+  if (pathname.startsWith('/facturation')) return 'facturation.voir';
+  if (pathname.startsWith('/projets/') && pathname.endsWith('/edit')) return 'projet.gerer';
+  if (pathname.match(/^\/projets\/[^/]+$/)) return 'projet.voir';
+  if (pathname.startsWith('/projets')) return 'projet.voir';
+  if (pathname.startsWith('/workflow')) return 'workflow.voir';
+
+  
 
   if (import.meta.env.DEV) {
     console.warn(`Permission non définie pour ${pathname}, accès refusé par défaut`);

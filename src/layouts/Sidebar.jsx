@@ -23,6 +23,13 @@ import {
   ArchiveBoxIcon,
   BanknotesIcon,
   CurrencyDollarIcon,
+  BuildingOffice2Icon as BuildingOfficeOutline,
+  CreditCardIcon,
+  ReceiptPercentIcon,
+  FolderOpenIcon,
+  AdjustmentsHorizontalIcon,
+  ShieldCheckIcon,
+  ArrowUpTrayIcon,
 } from '@heroicons/react/24/outline';
 
 const linkBase = 'flex items-center gap-3 rounded-lg text-sm font-medium transition-colors';
@@ -40,14 +47,14 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
   const hasRole = (roles) => {
     // Cas où aucun rôle n'est requis
     if (!roles) return true;
-    
+
     // Normaliser en tableau
     const rolesArray = Array.isArray(roles) ? roles : [roles];
     if (rolesArray.length === 0) return true;
-    
+
     // Vérifier l'utilisateur
     if (!user) return false;
-    
+
     // Normaliser les rôles de l'utilisateur
     let userRolesArray = [];
     if (Array.isArray(user.roles) && user.roles.length > 0) {
@@ -63,9 +70,9 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
     } else if (user.role_nom) {
       userRolesArray = [String(user.role_nom).trim().toUpperCase()];
     }
-    
+
     if (userRolesArray.length === 0) return false;
-    
+
     // Vérifier les rôles
     return rolesArray.some((role) => {
       const roleUpper = String(role).trim().toUpperCase();
@@ -152,7 +159,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
       roles: ['ADMIN', 'DG', 'COMPTABLE', 'MAGASINIER'],
       permission: 'pieces.view',
       children: [
-        { labelKey: 'navAddParts', path: '/pieces', roles: [ 'MAGASINIER'] },
+        { labelKey: 'navAddParts', path: '/pieces', roles: ['MAGASINIER'] },
         { labelKey: 'navPartsCatalog', path: '/pieces/catalogue', roles: ['COMPTABLE', 'MAGASINIER'] },
         { labelKey: 'navStockMovements', path: '/pieces/stock', roles: ['MAGASINIER'] },
         { labelKey: 'navBesoinsAttenteStock', path: '/besoins/attente-stock', roles: ['ADMIN', 'GESTIONNAIRE', 'DG'], permission: 'besoins.attente_stock.view' },
@@ -230,6 +237,24 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
         { labelKey: 'navEtats', path: '/etats', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
       ],
     },
+
+    {
+      labelKey: 'navPermissions',
+      icon: ShieldCheckIcon,
+      roles: ['ADMIN'],
+      permission: 'permission.gerer',
+      children: [
+        { labelKey: 'navPermissionsList', path: '/permissions' },
+        { labelKey: 'navPermissionsRoles', path: '/permissions/roles' },
+      ],
+    },
+    {
+      labelKey: 'navImport',
+      path: '/import',
+      icon: ArrowUpTrayIcon,
+      roles: ['ADMIN'],
+      permission: 'import.executer',
+    },
     {
       labelKey: 'navAI',
       icon: SparklesIcon,
@@ -240,6 +265,40 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
         { labelKey: 'navAIAssistant', path: '/ia/assistant', roles: ['ADMIN', 'DG', 'COMPTABLE', 'MAGASINIER'] },
         { labelKey: 'navAIPredictions', path: '/ia/alertes-achat', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
       ],
+    },
+
+    {
+      labelKey: 'navOrganisations',
+      path: '/organisations',
+      icon: BuildingOfficeOutline,
+      roles: ['ADMIN'],
+      permission: 'organisation.voir',
+    },
+    {
+      labelKey: 'navSaaS',
+      icon: CreditCardIcon,
+      roles: ['ADMIN', 'DG'],
+      permission: 'abonnement.voir',
+      children: [
+        { labelKey: 'navAbonnements', path: '/abonnements', roles: ['ADMIN', 'DG'] },
+        { labelKey: 'navFacturation', path: '/facturation', roles: ['ADMIN'] },
+      ],
+    },
+    {
+      labelKey: 'navProjets',
+      icon: FolderOpenIcon,
+      roles: ['ADMIN', 'DG', 'RESPONSABLE_PROJET', 'LOGISTICIEN'],
+      permission: 'projet.voir',
+      children: [
+        { labelKey: 'navProjetsList', path: '/projets', roles: ['ADMIN', 'DG', 'RESPONSABLE_PROJET', 'LOGISTICIEN'] },
+      ],
+    },
+    {
+      labelKey: 'navWorkflowConfig',
+      path: '/workflow',
+      icon: AdjustmentsHorizontalIcon,
+      roles: ['ADMIN'],
+      permission: 'workflow.voir',
     },
     {
       labelKey: 'navAudit',
@@ -298,8 +357,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
                 key={idx}
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex justify-center p-3 mx-2 rounded-lg transition-colors ${
-                    isActive ? linkActive : linkInactive
+                  `flex justify-center p-3 mx-2 rounded-lg transition-colors ${isActive ? linkActive : linkInactive
                   }`
                 }
                 title={t(item.labelKey)}
@@ -326,10 +384,9 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
                           key={cidx}
                           to={child.path}
                           className={({ isActive }) =>
-                            `block px-4 py-2 text-sm ${
-                              isActive || isChildActive(child.path)
-                                ? 'bg-primary-50 text-primary-600 font-medium dark:bg-night-active-sub dark:text-white'
-                                : 'text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-night-active dark:hover:text-white'
+                            `block px-4 py-2 text-sm ${isActive || isChildActive(child.path)
+                              ? 'bg-primary-50 text-primary-600 font-medium dark:bg-night-active-sub dark:text-white'
+                              : 'text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-night-active dark:hover:text-white'
                             }`
                           }
                         >

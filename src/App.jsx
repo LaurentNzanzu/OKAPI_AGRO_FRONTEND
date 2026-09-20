@@ -92,7 +92,19 @@ import {
   GestionCaisse,
   GestionEtats,
   CaissePage,
-  ConcertationsTab
+  ConcertationsTab,
+  ListeOrganisations,
+  FicheOrganisation,
+  GestionAbonnements,
+  ListeFactures,
+  ListeProjets,
+  FicheProjet,
+  GestionWorkflow,
+  NouvelleOrganisation,
+  NouveauProjet,
+  ListePermissions,
+  GestionPermissionsRole,
+  ImportCSV,
 } from './routes/lazyPages';
 
 const Lazy = ({ children }) => (
@@ -228,6 +240,21 @@ function App() {
                   <Route path="parametres" element={<Lazy><Parametres /></Lazy>} />
                   <Route path="profil" element={<Lazy><Profil /></Lazy>} />
                   <Route path="concertations" element={<Lazy><ConcertationsTab /></Lazy>} />
+                  {/* === SPRINT 0 — SaaS / Multi-tenant === */}
+                  <Route path="organisations/nouveau" element={<Lazy><NouvelleOrganisation /></Lazy>} />
+
+                  <Route path="organisations" element={<Lazy><ListeOrganisations /></Lazy>} />
+                  <Route path="organisations/:id" element={<Lazy><FicheOrganisation /></Lazy>} />
+                  <Route path="abonnements" element={<Lazy><GestionAbonnements /></Lazy>} />
+                  <Route path="facturation" element={<Lazy><ListeFactures /></Lazy>} />
+
+                  <Route path="projets" element={<Lazy><ListeProjets /></Lazy>} />
+                  <Route path="projets/:id" element={<Lazy><FicheProjet /></Lazy>} />
+                  <Route path="workflow" element={<Lazy><GestionWorkflow /></Lazy>} />
+                  <Route path="projets/nouveau" element={<Lazy><NouveauProjet /></Lazy>} />
+                  <Route path="permissions" element={<Lazy><ListePermissions /></Lazy>} />
+                  <Route path="permissions/roles" element={<Lazy><GestionPermissionsRole /></Lazy>} />
+                  <Route path="import" element={<Lazy><ImportCSV /></Lazy>} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Route>
 
