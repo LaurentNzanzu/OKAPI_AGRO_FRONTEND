@@ -4,11 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import projetsService from '../../services/projets';
-import AppPage from '../common/AppPage';
-import Card from '../common/Card';
-import Button from '../common/Button';
-import Input from '../common/Input';
-import { ArrowLeftIcon, FolderOpenIcon } from '../common/icons';
+import AppPage from '../ui/AppPage';
+import Card from '../ui/Card';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
+import { ArrowLeftIcon, FolderOpenIcon } from '../ui/icons';
 
 const NouveauProjet = () => {
   const navigate = useNavigate();
