@@ -2,10 +2,10 @@
 import React, { useState } from 'react';
 import { useTranslation } from '../../context/LanguageContext';
 import importCsvService from '../../services/importCsv';
-import AppPage from '../common/AppPage';
-import Card from '../common/Card';
-import Button from '../common/Button';
-import { ArrowUpTrayIcon, InformationCircleIcon } from '../common/icons';
+import AppPage from '../ui/AppPage';
+import Card from '../ui/Card';
+import Input from '../ui/Input';
+import { ArrowUpTrayIcon, InformationCircleIcon } from '../ui/icons';
 
 const TYPES = [
   { value: 'vehicules', label: 'Véhicules' },
