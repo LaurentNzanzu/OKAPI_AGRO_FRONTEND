@@ -142,7 +142,9 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
       permission: 'users.view',
       children: [
         { labelKey: 'navUsersList', path: '/utilisateurs' },
-        { labelKey: 'navPermissions', path: '/utilisateurs/permissions', permission: 'users.permissions.manage' },
+        // ═══ MODIF 5.23-ter — Suppression du sous-item "Permissions" ═══
+        // { labelKey: 'navPermissions', path: '/utilisateurs/permissions', permission: 'users.permissions.manage' },
+        // ═══ FIN MODIF ═══
       ],
     },
     {

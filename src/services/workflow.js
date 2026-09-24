@@ -3,7 +3,7 @@ import api from './api';
 
 const workflowService = {
   async listerEtapes(typeWorkflow) {
-    const { data } = await api.get(`/workflow/${typeWorkflow}/`);
+    const { data } = await api.get(`/workflow/${typeWorkflow}`);
     return data;
   },
 
