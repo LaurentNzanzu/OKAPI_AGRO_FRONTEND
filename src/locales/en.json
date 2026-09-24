@@ -1740,6 +1740,25 @@
     "permissionHelp": "Ex: MISSION_VALIDATE_LOG",
     "conditionHelp": "Ex: {\"seuil_montant\": 1000}"
   },
-    "navImport": "CSV Import"
+    "navImport": "CSV Import",
+  "moduleNotActive": {
+    "title": "Module not activated",
+    "message": "The \"{{module}}\" module is not included in your subscription. Contact your administrator."
+  },
+    "forceChangePassword": {
+    "title": "Password change required",
+    "subtitle": "For security reasons, you must change your temporary password before continuing.",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "submit": "Save and continue",
+    "submitting": "Saving...",
+    "errorMismatch": "Passwords do not match.",
+    "errorRules": "Password does not meet all requirements.",
+    "errorGeneric": "Unexpected error. Please retry.",
+    "ruleLength": "At least 8 characters",
+    "ruleUpper": "At least 1 uppercase letter",
+    "ruleLower": "At least 1 lowercase letter",
+    "ruleDigit": "At least 1 digit"
+  }
 }
 

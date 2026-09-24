@@ -253,6 +253,7 @@ const PUBLIC_ROUTES = new Set([
   '/login',
   '/forgot-password',
   '/reset-password',
+  '/force-change-password',
   '/unauthorized',
   '/404',
 ]);
@@ -466,3 +467,15 @@ export const hasAnyRole = (user, roles) => {
   const normalizedRoles = roles.map(r => String(r).trim().toUpperCase());
   return normalizedRoles.some(role => userRoles.includes(role));
 };
+export const isPlatformAdmin = (user) => {
+  if (!user) return false;
+  // Priorité au flag backend
+  if (user.is_platform_admin === true) return true;
+  // Fallback : dérivation
+  return (
+    (user.organisation_id === null || user.organisation_id === undefined) &&
+    Array.isArray(user.roles) &&
+    user.roles.map((r) => String(r).toUpperCase()).includes('ADMIN')
+  );
+};
+// ═══ FIN AJOUT 5.23 ═══

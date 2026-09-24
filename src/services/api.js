@@ -70,6 +70,36 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // ═══ AJOUT 5.23-bis — Détection 403 "Module non activé"      ═══
+    // ════════════════════════════════════════════════════════════════
+    // Backend renvoie : "Le module 'XXX' n'est pas activé pour votre organisation..."
+    // On dispatche un event global écouté par <ModuleNotActiveBanner />
+    if (error.response.status === 403) {
+      const detail = error.response.data?.detail || '';
+
+      const moduleMatch = detail.match(/Le module '([A-Z_]+)' n'est pas activé/i);
+
+      if (moduleMatch) {
+        const moduleCode = moduleMatch[1];
+
+        if (import.meta.env.DEV) {
+          console.warn(`[API] 🚫 Module '${moduleCode}' non activé pour cette ONG`);
+        }
+
+        window.dispatchEvent(
+          new CustomEvent('module-not-active', {
+            detail: {
+              module: moduleCode,
+              message: detail,
+              url: originalRequest?.url,
+            },
+          })
+        );
+      }
+    }
+    // ═══ FIN AJOUT 5.23-bis ═══
+
     // 2. Vérifier si la requête concernait déjà l'authentification (/login, /refresh)
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/login') || originalRequest?.url?.includes('/auth/refresh');
 

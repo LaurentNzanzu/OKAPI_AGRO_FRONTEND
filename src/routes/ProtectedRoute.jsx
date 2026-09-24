@@ -13,23 +13,23 @@ import authService from '../services/auth';
  * - Routes publiques
  * - Redirection intelligente
  */
-const ProtectedRoute = ({ 
-  children, 
-  allowedRoles = [], 
+const ProtectedRoute = ({
+  children,
+  allowedRoles = [],
   requireAuth = true,
   redirectTo = '/login'
 }) => {
-  const { 
-    authenticated, 
-    user, 
-    authReady, 
-    loading, 
-    isAuthenticated 
+  const {
+    authenticated,
+    user,
+    authReady,
+    loading,
+    isAuthenticated
   } = useAuth();
-  
+
   const location = useLocation();
   const { t } = useTranslation();
-  
+
   // État local pour la vérification du token
   const [hasValidToken, setHasValidToken] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
@@ -50,7 +50,7 @@ const ProtectedRoute = ({
     };
 
     checkToken();
-  // Re-vérifier à chaque changement d'état auth (ex: après logout)
+    // Re-vérifier à chaque changement d'état auth (ex: après logout)
   }, [authenticated, user]);
 
   // Normalisation des rôles
@@ -88,7 +88,7 @@ const ProtectedRoute = ({
 
     // Les administrateurs ont toujours accès (optionnel)
     const isAdmin = userRoles.includes('ADMIN');
-    
+
     return hasAccess || isAdmin;
   };
 
@@ -107,7 +107,7 @@ const ProtectedRoute = ({
   // État de chargement
   if (!authReady || loading || isChecking) {
     return (
-      <div 
+      <div
         className="loading-container"
         role="status"
         aria-live="polite"
@@ -121,7 +121,7 @@ const ProtectedRoute = ({
           gap: '1rem'
         }}
       >
-        <div 
+        <div
           className="loading-spinner"
           style={{
             width: '40px',
@@ -147,19 +147,37 @@ const ProtectedRoute = ({
 
   // Vérification si la route est publique
   const isPublic = isPublicRoute(location.pathname);
-  
+
   // Si la route est publique, on laisse passer
   if (isPublic) {
     return children;
   }
 
+  // ════════════════════════════════════════════════════════════════
+  // ═══ AJOUT 5.23-bis — Force Change Password (blocage total)  ═══
+  // ════════════════════════════════════════════════════════════════
+  // Si l'utilisateur est authentifié ET doit changer son mot de passe,
+  // on le redirige vers /force-change-password SAUF s'il y est déjà.
+  if (
+    authReady &&
+    user &&
+    user.doit_changer_mot_de_passe === true &&
+    location.pathname !== '/force-change-password'
+  ) {
+    if (import.meta.env.DEV) {
+      console.warn('[auth] 🔒 Mot de passe à changer → redirection forcée');
+    }
+    return <Navigate to="/force-change-password" replace />;
+  }
+  // ═══ FIN AJOUT 5.23-bis ═══
+
   // Si l'authentification est requise et que l'utilisateur n'est pas authentifié
   if (requireAuth && !isUserAuthenticated()) {
     return (
-      <Navigate 
-        to={redirectTo} 
-        state={{ from: location }} 
-        replace 
+      <Navigate
+        to={redirectTo}
+        state={{ from: location }}
+        replace
       />
     );
   }

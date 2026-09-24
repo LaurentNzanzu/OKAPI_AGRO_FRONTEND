@@ -22,6 +22,7 @@ import {
   ForgotPassword,
   ResetPassword,
   UnauthorizedPage,
+  ForceChangePasswordPage,
   Dashboard,
   ListeBiens,
   NouveauBien,
@@ -131,6 +132,9 @@ function App() {
                 <Route path="/forgot-password" element={<AuthLazy><ForgotPassword /></AuthLazy>} />
                 <Route path="/reset-password" element={<AuthLazy><ResetPassword /></AuthLazy>} />
                 <Route path="/unauthorized" element={<LanguageProvider><Lazy><UnauthorizedPage /></Lazy></LanguageProvider>} />
+                {/* ═══ AJOUT 5.23-bis — Force Change Password ═══ */}
+                <Route path="/force-change-password" element={<AuthLazy><ForceChangePasswordPage /></AuthLazy>} />
+                {/* ═══ FIN AJOUT ═══ */}
 
                 {/* Routes protégées — PermissionRoute dans Layout */}
                 <Route element={<LanguageProvider><ProtectedRoute><Layout /></ProtectedRoute></LanguageProvider>}>

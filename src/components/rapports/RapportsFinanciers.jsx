@@ -321,23 +321,23 @@ const RapportsFinanciers = () => {
           {/* ============================================================
               E. TABLEAU DE SUIVI DES AMORTISSEMENTS (Note 3C)
               ============================================================ */}
-          <Card title={`E. Tableau de suivi des amortissements - Exercice ${data.periode.exercice} (Note 3C SYSCOHADA)`}>
+          <Card title={`E. Tableau de suivi des amortissements - Exercice ${data.periode?.exercice || ''} (Note 3C SYSCOHADA)`}>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <div className="bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg">
                 <p className="text-xs text-gray-500">Biens amortis</p>
-                <p className="text-lg font-bold">{data.tableau_amortissements.total_biens}</p>
+                <p className="text-lg font-bold">{data.tableau_amortissements?.total_biens ?? 0}</p>
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
                 <p className="text-xs text-gray-500">Valeur brute</p>
-                <p className="text-lg font-bold">{formatNumber(data.tableau_amortissements.total_valeur_origine)} USD</p>
+                <p className="text-lg font-bold">{formatNumber(data.tableau_amortissements?.total_valeur_origine ?? 0)} USD</p>
               </div>
               <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
                 <p className="text-xs text-gray-500">Dotation N</p>
-                <p className="text-lg font-bold">{formatNumber(data.tableau_amortissements.total_annuite_exercice)} USD</p>
+                <p className="text-lg font-bold">{formatNumber(data.tableau_amortissements?.total_annuite_exercice ?? 0)} USD</p>
               </div>
               <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
                 <p className="text-xs text-gray-500">VNC</p>
-                <p className="text-lg font-bold">{formatNumber(data.tableau_amortissements.total_valeur_nette_comptable)} USD</p>
+                <p className="text-lg font-bold">{formatNumber(data.tableau_amortissements?.total_valeur_nette_comptable ?? 0)} USD</p>
               </div>
             </div>
 
@@ -357,7 +357,7 @@ const RapportsFinanciers = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {data.tableau_amortissements.details.slice(0, 10).map((a) => (
+                  {(data.tableau_amortissements?.details || []).slice(0, 10).map((a) => (
                     <tr key={a.id_bien} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
                       <td className="px-2 py-1.5 font-medium">{a.designation}</td>
                       <td className="px-2 py-1.5 capitalize">{a.type_bien || '-'}</td>
@@ -370,11 +370,11 @@ const RapportsFinanciers = () => {
                     </tr>
                   ))}
                 </tbody>
-                {data.tableau_amortissements.details.length > 10 && (
+                {(data.tableau_amortissements?.details?.length || 0) > 10 && (
                   <tfoot>
                     <tr>
                       <td colSpan="8" className="px-2 py-2 text-center text-gray-400 text-xs">
-                        + {data.tableau_amortissements.details.length - 10} autres biens
+                        + {(data.tableau_amortissements?.details?.length || 0) - 10} autres biens
                       </td>
                     </tr>
                   </tfoot>
@@ -386,74 +386,86 @@ const RapportsFinanciers = () => {
           {/* ============================================================
               F. NOTES ANNEXES SYSCOHADA
               ============================================================ */}
-          <Card title="F. Notes annexes SYSCOHADA">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Note 3A */}
-              <div className="border rounded-lg p-3">
-                <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">{data.notes_annexes.note_3a.titre}</h4>
-                <div className="space-y-1">
-                  {data.notes_annexes.note_3a.details.map((item) => (
-                    <div key={item.categorie} className="flex justify-between text-sm border-b border-gray-100 dark:border-gray-700 py-1">
-                      <span className="capitalize">{item.categorie}</span>
-                      <span>{item.nombre_biens} biens — {formatNumber(item.valeur_brute)} USD</span>
+          {data.notes_annexes && (
+            <Card title="F. Notes annexes SYSCOHADA">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Note 3A */}
+                {data.notes_annexes.note_3a && (
+                  <div className="border rounded-lg p-3">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">{data.notes_annexes.note_3a.titre}</h4>
+                    <div className="space-y-1">
+                      {(data.notes_annexes.note_3a.details || []).map((item) => (
+                        <div key={item.categorie} className="flex justify-between text-sm border-b border-gray-100 dark:border-gray-700 py-1">
+                          <span className="capitalize">{item.categorie}</span>
+                          <span>{item.nombre_biens} biens — {formatNumber(item.valeur_brute)} USD</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                )}
 
-              {/* Note 3C */}
-              <div className="border rounded-lg p-3">
-                <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">{data.notes_annexes.note_3c.titre}</h4>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm py-1">
-                    <span>Dotation de l'exercice</span>
-                    <span className="font-medium">{formatNumber(data.notes_annexes.note_3c.details.dotation_exercice)} USD</span>
+                {/* Note 3C */}
+                {data.notes_annexes.note_3c && (
+                  <div className="border rounded-lg p-3">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">{data.notes_annexes.note_3c.titre}</h4>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm py-1">
+                        <span>Dotation de l'exercice</span>
+                        <span className="font-medium">{formatNumber(data.notes_annexes.note_3c.details?.dotation_exercice ?? 0)} USD</span>
+                      </div>
+                      <div className="flex justify-between text-sm py-1 border-t border-gray-100">
+                        <span>Cumul des amortissements</span>
+                        <span className="font-medium">{formatNumber(data.notes_annexes.note_3c.details?.cumul_amortissements ?? 0)} USD</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm py-1 border-t border-gray-100">
-                    <span>Cumul des amortissements</span>
-                    <span className="font-medium">{formatNumber(data.notes_annexes.note_3c.details.cumul_amortissements)} USD</span>
-                  </div>
-                </div>
-              </div>
+                )}
 
-              {/* Note 3D */}
-              <div className="border rounded-lg p-3">
-                <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">{data.notes_annexes.note_3d.titre}</h4>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm py-1">
-                    <span>Plus-values</span>
-                    <span className="text-green-600 font-medium">{formatNumber(data.notes_annexes.note_3d.details.plus_values)} USD</span>
+                {/* Note 3D */}
+                {data.notes_annexes.note_3d && (
+                  <div className="border rounded-lg p-3">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">{data.notes_annexes.note_3d.titre}</h4>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm py-1">
+                        <span>Plus-values</span>
+                        <span className="text-green-600 font-medium">{formatNumber(data.notes_annexes.note_3d.details?.plus_values ?? 0)} USD</span>
+                      </div>
+                      <div className="flex justify-between text-sm py-1">
+                        <span>Moins-values</span>
+                        <span className="text-red-600 font-medium">{formatNumber(data.notes_annexes.note_3d.details?.moins_values ?? 0)} USD</span>
+                      </div>
+                      <div className="flex justify-between text-sm py-1 border-t border-gray-100">
+                        <span>Résultat net</span>
+                        <span className={`font-medium ${(data.notes_annexes.note_3d.details?.resultat_net ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatNumber(data.notes_annexes.note_3d.details?.resultat_net ?? 0)} USD
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm py-1">
-                    <span>Moins-values</span>
-                    <span className="text-red-600 font-medium">{formatNumber(data.notes_annexes.note_3d.details.moins_values)} USD</span>
-                  </div>
-                  <div className="flex justify-between text-sm py-1 border-t border-gray-100">
-                    <span>Résultat net</span>
-                    <span className={`font-medium ${data.notes_annexes.note_3d.details.resultat_net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatNumber(data.notes_annexes.note_3d.details.resultat_net)} USD
-                    </span>
-                  </div>
-                </div>
-              </div>
+                )}
 
-              {/* Note 3B */}
-              <div className="border rounded-lg p-3">
-                <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">{data.notes_annexes.note_3b.titre}</h4>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm py-1">
-                    <span>Contrats en cours</span>
-                    <span>{data.notes_annexes.note_3b.details.nombre_contrats}</span>
+                {/* Note 3B */}
+                {data.notes_annexes.note_3b && (
+                  <div className="border rounded-lg p-3">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">{data.notes_annexes.note_3b.titre}</h4>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm py-1">
+                        <span>Contrats en cours</span>
+                        <span>{data.notes_annexes.note_3b.details?.nombre_contrats ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between text-sm py-1">
+                        <span>Valeur totale</span>
+                        <span>{formatNumber(data.notes_annexes.note_3b.details?.valeur_totale ?? 0)} USD</span>
+                      </div>
+                      {data.notes_annexes.note_3b.details?.commentaire && (
+                        <p className="text-xs text-gray-400 mt-1">{data.notes_annexes.note_3b.details.commentaire}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm py-1">
-                    <span>Valeur totale</span>
-                    <span>{formatNumber(data.notes_annexes.note_3b.details.valeur_totale)} USD</span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">{data.notes_annexes.note_3b.details.commentaire}</p>
-                </div>
+                )}
               </div>
-            </div>
-          </Card>
+            </Card>
+          )}
 
           {/* Footer */}
           <div className="text-center text-xs text-gray-400 border-t pt-4 mt-4">
