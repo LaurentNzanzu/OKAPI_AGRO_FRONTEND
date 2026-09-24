@@ -19,7 +19,7 @@ const generateFingerprint = () => {
       navigator.language || 'unknown',
       navigator.hardwareConcurrency || 'unknown',
     ];
-    
+
     const raw = components.join('|');
     // Hash simple (pas besoin de crypto fort, c'est juste pour l'identification)
     let hash = 0;
@@ -63,12 +63,12 @@ const authService = {
   getFingerprint: () => FINGERPRINT,
 
   // === STOCKAGE ===
-  
+
   setTokens(accessToken, sessionUuid, expiresIn) {
     try {
       sessionStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
       sessionStorage.setItem(STORAGE_KEYS.SESSION_UUID, sessionUuid);
-      
+
       // Calcul de la date d'expiration
       if (expiresIn) {
         const expiresAt = Date.now() + (expiresIn * 1000);
@@ -124,7 +124,7 @@ const authService = {
   isTokenExpired() {
     const expiresAt = this.getTokenExpiresAt();
     if (!expiresAt) return true;
-    
+
     // Ajoute une marge de sécurité de 30 secondes
     const marginMs = 30000;
     return Date.now() + marginMs > expiresAt;
@@ -146,26 +146,26 @@ const authService = {
   login: async (email, mot_de_passe) => {
     try {
       const response = await api.post('/auth/login', { email, mot_de_passe });
-      
+
       if (response.data) {
         const { access_token, session_uuid, expires_in, user } = response.data;
         authService.setTokens(access_token, session_uuid, expires_in);
-        
+
         const normalizedUser = {
           ...user,
           roles: normalizeRoles(user),
         };
         authService.setUser(normalizedUser);
-        
-        return { 
-          success: true, 
+
+        return {
+          success: true,
           data: {
             ...response.data,
             user: normalizedUser,
           }
         };
       }
-      
+
       return {
         success: false,
         error: 'Réponse invalide du serveur',
@@ -196,17 +196,17 @@ const authService = {
   refreshToken: async () => {
     try {
       const response = await api.post('/auth/refresh');
-      
+
       if (response.data) {
         const { access_token, session_uuid, expires_in } = response.data;
         authService.setTokens(access_token, session_uuid, expires_in);
-        
+
         return {
           success: true,
           data: response.data,
         };
       }
-      
+
       return {
         success: false,
         error: 'Réponse invalide du serveur',
@@ -231,15 +231,15 @@ const authService = {
         permissions: response.data.permissions || [],
         session_uuid: response.data.session_uuid,
       };
-      
+
       // Stocker l'utilisateur en sessionStorage
       authService.setUser(normalizedUser);
-      
+
       // Si on a reçu un session_uuid, le stocker aussi
       if (response.data.session_uuid) {
         sessionStorage.setItem(STORAGE_KEYS.SESSION_UUID, response.data.session_uuid);
       }
-      
+
       return { success: true, data: normalizedUser };
     } catch (error) {
       return {
@@ -252,13 +252,13 @@ const authService = {
   isAuthenticated: () => {
     const token = authService.getAccessToken();
     if (!token) return false;
-    
+
     // Vérification supplémentaire : le token n'est pas expiré
     return !authService.isTokenExpired();
   },
 
   // === RÉCUPÉRATION DE SESSION (Phase 6) ===
-  
+
   restoreSession: async () => {
     /**
      * Tente de restaurer la session depuis le cookie Refresh Token.
@@ -267,29 +267,29 @@ const authService = {
     try {
       // 1. Tenter d'abord de rafraîchir le token via le refresh token (cookie HttpOnly)
       const refreshResult = await authService.refreshToken();
-      
+
       if (!refreshResult.success) {
-        return { 
-          success: false, 
-          error: refreshResult.error || 'Impossible de restaurer la session' 
+        return {
+          success: false,
+          error: refreshResult.error || 'Impossible de restaurer la session'
         };
       }
 
       // 2. Une fois le nouvel access token obtenu, récupérer les infos de l'utilisateur
       const userResult = await authService.getCurrentUser();
       if (userResult.success) {
-        return { 
-          success: true, 
+        return {
+          success: true,
           data: {
             user: userResult.data,
             session_uuid: authService.getSessionUuid(),
           }
         };
       }
-      
-      return { 
-        success: false, 
-        error: userResult.error || 'Impossible de récupérer le profil utilisateur' 
+
+      return {
+        success: false,
+        error: userResult.error || 'Impossible de récupérer le profil utilisateur'
       };
     } catch (error) {
       return {
@@ -298,6 +298,34 @@ const authService = {
       };
     }
   },
+  // ════════════════════════════════════════════════════════════════
+  // ═══ AJOUT 5.23-bis — Force Change Password (1ère connexion) ═══
+  // ════════════════════════════════════════════════════════════════
+  forceChangePassword: async (nouveauMotDePasse) => {
+    try {
+      const response = await api.post('/auth/force-change-password', {
+        nouveau_mot_de_passe: nouveauMotDePasse,
+      });
+
+      // Mettre à jour l'utilisateur local (flag passe à false)
+      const currentUser = authService.getUser();
+      if (currentUser) {
+        authService.setUser({
+          ...currentUser,
+          doit_changer_mot_de_passe: false,
+        });
+      }
+
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'Erreur lors du changement de mot de passe',
+      };
+    }
+  },
+  // ═══ FIN AJOUT 5.23-bis ═══
+
 
   forgotPassword: async (email) => {
     const response = await api.post('/auth/forgot-password', { email });

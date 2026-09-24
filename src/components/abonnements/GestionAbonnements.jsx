@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import { isPlatformAdmin } from '../../config/permissions';
 import api from '../../services/api';
 import AppPage from '../ui/AppPage';
 import Card from '../ui/Card';
@@ -18,6 +19,7 @@ import {
 const GestionAbonnements = () => {
   const { t } = useTranslation();
   const { user, hasPermission } = useAuth();
+  const isPlatform = isPlatformAdmin(user);
 
   const [organisationId, setOrganisationId] = useState(user?.organisation_id || '');
   const [organisations, setOrganisations] = useState([]);
@@ -28,10 +30,10 @@ const GestionAbonnements = () => {
   const [renewModal, setRenewModal] = useState(false);
   const [dureeMois, setDureeMois] = useState(12);
 
-  // Charger la liste des organisations (si ADMIN plateforme)
-  useEffect(() => {
+   useEffect(() => {
     const loadOrgs = async () => {
-      if (!hasPermission('organisation.voir')) return;
+      // ═══ AJOUT 5.23-bis — Seul l'ADMIN plateforme charge la liste complète ═══
+      if (!isPlatform) return;
       try {
         const { data } = await api.get('/organisations/');
         setOrganisations(Array.isArray(data) ? data : []);
@@ -40,7 +42,7 @@ const GestionAbonnements = () => {
       }
     };
     loadOrgs();
-  }, [hasPermission]);
+  }, [isPlatform]);
 
   const fetchData = useCallback(async () => {
     if (!organisationId) return;
@@ -122,7 +124,7 @@ const GestionAbonnements = () => {
         </div>
       </div>
 
-      {hasPermission('organisation.voir') && organisations.length > 0 && (
+      {isPlatform && organisations.length > 0 && (
         <Card compact className="mb-6">
           <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">
             {t('abonnements.selectOrg')}
@@ -142,7 +144,7 @@ const GestionAbonnements = () => {
         </Card>
       )}
 
-      {!organisationId && (
+     {!organisationId && isPlatform && (
         <Card>
           <p className="text-center py-10 text-sm text-gray-500 dark:text-slate-400">
             {t('abonnements.selectOrg')}

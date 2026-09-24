@@ -96,10 +96,10 @@ const RapportsTechniques = () => {
             ) : data ? (
                 <>
                     <div className="app-stats-grid">
-                        <StatCard label="Total biens" value={data.synthese.total_biens} icon={CubeIcon} hint={`Taux occupation: ${data.synthese.taux_occupation}%`} />
-                        <StatCard label="Pannes" value={data.synthese.total_pannes} icon={ExclamationTriangleIcon} accent="warning" hint="sur la période" />
-                        <StatCard label="Maintenances" value={data.synthese.total_maintenances} icon={Cog6ToothIcon} hint={`Taux résolution: ${data.synthese.taux_resolution_maintenances}%`} />
-                        <StatCard label="Biens actifs" value={data.synthese.biens_actifs} icon={CubeIcon} hint={`Réformés: ${data.synthese.biens_reformes}`} />
+                        <StatCard label="Total biens" value={data.synthese?.total_biens ?? 0} icon={CubeIcon} hint={`Taux occupation: ${data.synthese?.taux_occupation ?? 0}%`} />
+                        <StatCard label="Pannes" value={data.synthese?.total_pannes ?? 0} icon={ExclamationTriangleIcon} accent="warning" hint="sur la période" />
+                        <StatCard label="Maintenances" value={data.synthese?.total_maintenances ?? 0} icon={Cog6ToothIcon} hint={`Taux résolution: ${data.synthese?.taux_resolution_maintenances ?? 0}%`} />
+                        <StatCard label="Biens actifs" value={data.synthese?.biens_actifs ?? 0} icon={CubeIcon} hint={`Réformés: ${data.synthese?.biens_reformes ?? 0}`} />
                     </div>
 
                     {/* Répartition par état */}
@@ -110,14 +110,14 @@ const RapportsTechniques = () => {
                                 Répartition par état
                             </h2>
                             <div className="space-y-2">
-                                {Object.entries(data.repartition_etats).map(([etat, count]) => (
+                                {Object.entries(data.repartition_etats || {}).map(([etat, count]) => (
                                     <div key={etat} className="flex items-center justify-between">
                                         <span className="text-sm">{etat}</span>
                                         <div className="flex items-center gap-2">
                                             <div className="w-32 bg-gray-200 rounded-full h-2">
                                                 <div 
                                                     className="bg-primary-600 h-2 rounded-full" 
-                                                    style={{ width: `${(count / data.synthese.total_biens) * 100}%` }}
+                                                    style={{ width: `${(count / (data.synthese?.total_biens || 1)) * 100}%` }}
                                                 ></div>
                                             </div>
                                             <span className="text-sm font-medium">{count}</span>
@@ -133,14 +133,14 @@ const RapportsTechniques = () => {
                                 Pannes par type
                             </h2>
                             <div className="space-y-2">
-                                {Object.entries(data.pannes_par_type).map(([type, count]) => (
+                                {Object.entries(data.pannes_par_type || {}).map(([type, count]) => (
                                     <div key={type} className="flex items-center justify-between">
                                         <span className="text-sm">{type}</span>
                                         <div className="flex items-center gap-2">
                                             <div className="w-32 bg-gray-200 rounded-full h-2">
                                                 <div 
                                                     className="bg-red-600 h-2 rounded-full" 
-                                                    style={{ width: `${(count / data.synthese.total_pannes) * 100}%` }}
+                                                    style={{ width: `${(count / (data.synthese?.total_pannes || 1)) * 100}%` }}
                                                 ></div>
                                             </div>
                                             <span className="text-sm font-medium">{count}</span>
@@ -152,7 +152,7 @@ const RapportsTechniques = () => {
                     </div>
 
                     {/* Top biens en panne */}
-                    {data.top_biens_pannes.length > 0 && (
+                    {(data.top_biens_pannes || []).length > 0 && (
                         <Card title="Top 5 biens les plus en panne" icon={<AppIcon icon={TrophyIcon} size="md" />} noPadding>
                             <div className="app-table-wrap">
                             <table className="data-table">
@@ -189,11 +189,11 @@ const RapportsTechniques = () => {
                         </h2>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="text-center p-3 bg-green-50 rounded-lg">
-                                <p className="text-2xl font-bold text-green-700">{data.maintenances.preventives}</p>
+                                <p className="text-2xl font-bold text-green-700">{data.maintenances?.preventives ?? 0}</p>
                                 <p className="text-sm text-gray-600 dark:text-slate-300">Préventives</p>
                             </div>
                             <div className="text-center p-3 bg-orange-50 rounded-lg">
-                                <p className="text-2xl font-bold text-orange-700">{data.maintenances.correctives}</p>
+                                <p className="text-2xl font-bold text-orange-700">{data.maintenances?.correctives ?? 0}</p>
                                 <p className="text-sm text-gray-600 dark:text-slate-300">Correctives</p>
                             </div>
                         </div>

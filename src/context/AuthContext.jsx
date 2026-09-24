@@ -13,28 +13,53 @@ export const useAuth = () => {
   return context;
 };
 
+// ════════════════════════════════════════════════════════════════
+// ═══ AJOUT 5.23 — Helpers multi-tenant SaaS                   ═══
+// ════════════════════════════════════════════════════════════════
+const extractActiveModules = (userData) => {
+  if (!userData) return [];
+  // Format backend actuel : user.modules_actifs (flat)
+  if (Array.isArray(userData.modules_actifs)) return userData.modules_actifs;
+  // Fallback : user.organisation.modules_actifs (nested)
+  const fromOrg = userData.organisation?.modules_actifs;
+  if (Array.isArray(fromOrg)) return fromOrg;
+  return [];
+};
+
+const extractOrganisationId = (userData) => {
+  if (!userData) return null;
+  return userData.organisation_id ?? userData.organisation?.id ?? null;
+};
+// ═══ FIN AJOUT 5.23 ═══
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authReady, setAuthReady] = useState(false);
 
+  // ═══ AJOUT 5.23 ═══
+  const [activeModules, setActiveModules] = useState([]);
+  const [organisationId, setOrganisationId] = useState(null);
+  // ═══ FIN AJOUT ═══
+
+  // Helper central : applique user + org + modules en un seul point
+  const applyUser = useCallback((userData) => {
+    setUser(userData);
+    setActiveModules(extractActiveModules(userData));
+    setOrganisationId(extractOrganisationId(userData));
+  }, []);
+
   // Vérification de l'état initial
   useEffect(() => {
     const initializeAuth = async () => {
       setLoading(true);
       try {
-        // 🔍 LOG DE DÉBOGAGE (optionnel)
         if (import.meta.env.DEV) {
           console.log('[Auth] Initialisation...');
         }
 
         const token = authService.getAccessToken();
-        const sessionUuid = authService.getSessionUuid();
-
-        // ============================================================
-        // 🔴 CORRECTION : Gérer le cas où le token est expiré
-        // ============================================================
 
         // CAS 1 : Token présent mais expiré → Tentative de refresh
         if (token && authService.isTokenExpired()) {
@@ -43,7 +68,6 @@ export const AuthProvider = ({ children }) => {
           }
 
           try {
-            // Tentative de refresh automatique
             const refreshResult = await authService.refreshToken();
 
             if (refreshResult.success) {
@@ -51,17 +75,15 @@ export const AuthProvider = ({ children }) => {
                 console.log('[Auth] Refresh réussi !');
               }
 
-              // Récupérer l'utilisateur avec le nouveau token
               const userResult = await authService.getCurrentUser();
               if (userResult.success) {
-                setUser(userResult.data);
+                applyUser(userResult.data);
                 setIsAuthenticated(true);
                 setAuthReady(true);
               } else {
                 throw new Error('Échec récupération utilisateur après refresh');
               }
             } else {
-              // Refresh échoué → déconnecter
               if (import.meta.env.DEV) {
                 console.warn('[Auth] Refresh échoué, déconnexion...');
               }
@@ -72,7 +94,6 @@ export const AuthProvider = ({ children }) => {
               return;
             }
           } catch (refreshError) {
-            // Erreur lors du refresh
             console.error('[Auth] Erreur refresh:', refreshError);
             authService.clearTokens();
             setIsAuthenticated(false);
@@ -89,17 +110,16 @@ export const AuthProvider = ({ children }) => {
 
           const result = await authService.getCurrentUser();
           if (result.success) {
-            setUser(result.data);
+            applyUser(result.data);
             setIsAuthenticated(true);
             setAuthReady(true);
           } else {
-            // Token invalide malgré tout
             authService.clearTokens();
             setIsAuthenticated(false);
             setAuthReady(true);
           }
         }
-        // CAS 3 : Pas de token en sessionStorage → Vérifier cookie Refresh Token
+        // CAS 3 : Pas de token → Vérifier cookie Refresh Token
         else {
           if (import.meta.env.DEV) {
             console.log('[Auth] Pas de token, vérification cookie...');
@@ -108,7 +128,7 @@ export const AuthProvider = ({ children }) => {
           try {
             const userResult = await authService.getCurrentUser();
             if (userResult.success) {
-              setUser(userResult.data);
+              applyUser(userResult.data);
               setIsAuthenticated(true);
               setAuthReady(true);
             } else {
@@ -132,7 +152,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     initializeAuth();
-  }, []);
+  }, [applyUser]);
 
   // === LOGIN ===
   const login = useCallback(async (email, password) => {
@@ -140,7 +160,7 @@ export const AuthProvider = ({ children }) => {
       const result = await authService.login(email, password);
 
       if (result.success) {
-        setUser(result.data.user);
+        applyUser(result.data.user);
         setIsAuthenticated(true);
         return { success: true, data: result.data };
       }
@@ -152,7 +172,7 @@ export const AuthProvider = ({ children }) => {
         error: error.response?.data?.detail || 'Erreur de connexion',
       };
     }
-  }, []);
+  }, [applyUser]);
 
   // === LOGOUT ===
   const logout = useCallback(async () => {
@@ -163,6 +183,8 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setUser(null);
       setIsAuthenticated(false);
+      setActiveModules([]);
+      setOrganisationId(null);
       authService.clearTokens();
     }
   }, []);
@@ -172,15 +194,13 @@ export const AuthProvider = ({ children }) => {
     try {
       const result = await authService.refreshToken();
       if (result.success) {
-        // Réactualiser les informations utilisateur
         const userResult = await authService.getCurrentUser();
         if (userResult.success) {
-          setUser(userResult.data);
+          applyUser(userResult.data);
           setIsAuthenticated(true);
         }
         return { success: true };
       }
-      // Si le refresh échoue, déconnecter
       await logout();
       return { success: false, error: result.error };
     } catch (error) {
@@ -190,13 +210,13 @@ export const AuthProvider = ({ children }) => {
         error: error.response?.data?.detail || 'Erreur de rafraîchissement',
       };
     }
-  }, [logout]);
+  }, [logout, applyUser]);
 
   // === MISE À JOUR DU PROFIL ===
   const updateUser = useCallback((userData) => {
-    setUser(userData);
+    applyUser(userData);
     authService.setUser(userData);
-  }, []);
+  }, [applyUser]);
 
   // === PERMISSIONS HELPERS ===
   const hasPermission = useCallback((permission) => {
@@ -211,12 +231,28 @@ export const AuthProvider = ({ children }) => {
     return permHasAnyRole(user, roles);
   }, [user]);
 
+  // ═══ AJOUT 5.23 — Helper module ═══
+  const hasModule = useCallback((moduleCode) => {
+    if (!moduleCode) return true;
+    // Si l'utilisateur est plateforme admin (pas d'ONG), bypass
+    if (user?.is_platform_admin) return true;
+    // Si aucun module défini → bypass (safe default)
+    if (!Array.isArray(activeModules) || activeModules.length === 0) return true;
+    return activeModules.includes(moduleCode);
+  }, [activeModules, user]);
+  // ═══ FIN AJOUT ═══
+
   const value = {
     user,
     loading,
     authReady,
     isAuthenticated,
     authenticated: isAuthenticated,
+    // ═══ AJOUT 5.23 ═══
+    activeModules,
+    organisationId,
+    hasModule,
+    // ═══ FIN AJOUT ═══
     login,
     logout,
     refreshToken,
@@ -224,7 +260,6 @@ export const AuthProvider = ({ children }) => {
     hasPermission,
     hasRole,
     hasAnyRole,
-    // Exposer certaines méthodes du service
     getAccessToken: authService.getAccessToken,
     getSessionUuid: authService.getSessionUuid,
     isTokenExpired: authService.isTokenExpired,

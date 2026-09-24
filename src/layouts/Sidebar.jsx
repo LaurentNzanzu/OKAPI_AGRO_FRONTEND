@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { resolveRoutePermission } from '../config/permissions';
+import { resolveRoutePermission,isPlatformAdmin } from '../config/permissions';
 import AccessibleClickable from '../components/common/AccessibleClickable';
 import {
   Squares2X2Icon,
@@ -39,23 +39,19 @@ const childActive = 'block px-4 py-2 text-sm rounded-lg nav-child-active';
 const childInactive = 'block px-4 py-2 text-sm rounded-lg nav-child';
 
 const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
-  const { user, hasPermission } = useAuth();
+  // ═══ AJOUT 5.23 — hasModule ═══
+  const { user, hasPermission, hasModule } = useAuth();
+  // ═══ FIN AJOUT ═══
   const { t } = useLanguage();
   const location = useLocation();
   const [openMenus, setOpenMenus] = useState({});
 
   const hasRole = (roles) => {
-    // Cas où aucun rôle n'est requis
     if (!roles) return true;
-
-    // Normaliser en tableau
     const rolesArray = Array.isArray(roles) ? roles : [roles];
     if (rolesArray.length === 0) return true;
-
-    // Vérifier l'utilisateur
     if (!user) return false;
 
-    // Normaliser les rôles de l'utilisateur
     let userRolesArray = [];
     if (Array.isArray(user.roles) && user.roles.length > 0) {
       userRolesArray = user.roles.map((r) => String(r).trim().toUpperCase()).filter(Boolean);
@@ -73,7 +69,6 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
 
     if (userRolesArray.length === 0) return false;
 
-    // Vérifier les rôles
     return rolesArray.some((role) => {
       const roleUpper = String(role).trim().toUpperCase();
       return userRolesArray.includes(roleUpper);
@@ -85,6 +80,9 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
     return !perm || hasPermission(perm);
   };
 
+  // ════════════════════════════════════════════════════════════════
+  // ═══ MODIF 5.23 — Ajout du filtre module dans canAccessItem   ═══
+  // ════════════════════════════════════════════════════════════════
   const canAccessItem = (item) => {
     if (hasRole('COMPTABLE')) {
       if (item.path === '/scan' || item.labelKey === 'navScan') return false;
@@ -94,23 +92,37 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
 
     if (!hasRole(item.roles)) return false;
     if (item.permission && !hasPermission(item.permission)) return false;
+
+    // 🆕 AJOUT 5.23 — Filtre module (multi-tenant SaaS)
+    if (item.module && !hasModule(item.module)) return false;
+
+    // 🆕 AJOUT 5.23-bis — Filtre platformOnly (admin plateforme)
+    if (item.platformOnly && !isPlatformAdmin(user)) return false;
+
     if (item.path) return canAccessPath(item.path);
     if (item.children) {
       return item.children.some(
         (child) =>
           hasRole(child.roles) &&
           (!child.permission || hasPermission(child.permission)) &&
+          // 🆕 AJOUT 5.23
+          (!child.module || hasModule(child.module)) &&
           canAccessPath(child.path)
       );
     }
     return true;
   };
+  // ═══ FIN MODIF 5.23 ═══
 
+  // ════════════════════════════════════════════════════════════════
+  // ═══ MODIF 5.23 — Ajout du champ `module` sur chaque item      ═══
+  // ════════════════════════════════════════════════════════════════
   const menuItems = [
     {
       labelKey: 'navDashboard',
       path: '/dashboard',
       icon: Squares2X2Icon,
+      // 🆕 PAS DE MODULE — toujours visible
       roles: ['ADMIN', 'DG', 'COMPTABLE', 'TECHNICIEN', 'CAISSE', 'MAGASINIER'],
       permission: 'dashboard.view',
     },
@@ -118,12 +130,14 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
       labelKey: 'navScan',
       path: '/scan',
       icon: QrCodeIcon,
+      module: 'MAINTENANCE',                                    // 🆕 AJOUT
       roles: ['ADMIN', 'DG', 'COMPTABLE', 'TECHNICIEN', 'CAISSE', 'MAGASINIER'],
       permission: 'pieces.view',
     },
     {
       labelKey: 'navUsers',
       icon: UserGroupIcon,
+      // 🆕 PAS DE MODULE — admin only
       roles: ['ADMIN'],
       permission: 'users.view',
       children: [
@@ -134,17 +148,19 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
     {
       labelKey: 'navAssets',
       icon: CubeIcon,
+      module: 'IMMOBILISATION',                                 // 🆕 AJOUT
       roles: ['ADMIN', 'DG', 'COMPTABLE', 'TECHNICIEN'],
       permission: 'biens.view',
       children: [
         { labelKey: 'navAllAssets', path: '/biens' },
         { labelKey: 'navAddAsset', path: '/biens/nouveau', roles: ['COMPTABLE', 'ADMIN'] },
-        { labelKey: 'navPartsMgmt', path: '/pieces', roles: ['COMPTABLE'] },
+        { labelKey: 'navPartsMgmt', path: '/pieces', roles: ['COMPTABLE'], module: 'MAINTENANCE' },   // 🆕
       ],
     },
     {
       labelKey: 'navBreakdowns',
       icon: ExclamationTriangleIcon,
+      module: 'MAINTENANCE',                                    // 🆕 AJOUT
       roles: ['ADMIN', 'TECHNICIEN', 'DG'],
       permission: 'pannes.view',
       children: [
@@ -156,6 +172,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
     {
       labelKey: 'navSpareParts',
       icon: PuzzlePieceIcon,
+      module: 'MAINTENANCE',                                    // 🆕 AJOUT
       roles: ['ADMIN', 'DG', 'COMPTABLE', 'MAGASINIER'],
       permission: 'pieces.view',
       children: [
@@ -168,6 +185,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
     {
       labelKey: 'navFournitures',
       icon: ArchiveBoxIcon,
+      module: 'MAINTENANCE',                                    // 🆕 AJOUT
       roles: ['MAGASINIER', 'ADMIN'],
       permission: 'fournitures.view',
       children: [
@@ -177,6 +195,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
     {
       labelKey: 'navMaintenance',
       icon: WrenchScrewdriverIcon,
+      module: 'MAINTENANCE',                                    // 🆕 AJOUT
       roles: ['ADMIN', 'TECHNICIEN'],
       permission: 'maintenances.view',
       children: [
@@ -189,6 +208,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
     {
       labelKey: 'navValidations',
       icon: CheckCircleIcon,
+      // 🆕 PAS DE MODULE — workflow transverse
       roles: ['ADMIN', 'DG', 'COMPTABLE', 'CAISSE'],
       permission: 'validations.view',
       children: [
@@ -200,6 +220,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
       labelKey: 'navCaisse',
       path: '/caisse',
       icon: BanknotesIcon,
+      module: 'IMMOBILISATION',                                 // 🆕 AJOUT
       roles: ['CAISSE', 'ADMIN', 'DG', 'COMPTABLE'],
       permission: 'validations.view',
     },
@@ -207,12 +228,14 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
       labelKey: 'navBudgets',
       path: '/budgets',
       icon: CurrencyDollarIcon,
+      module: 'IMMOBILISATION',                                 // 🆕 AJOUT
       roles: ['COMPTABLE', 'ADMIN', 'DG'],
       permission: 'validations.view',
     },
     {
       labelKey: 'navDepreciation',
       icon: CalculatorIcon,
+      module: 'IMMOBILISATION',                                 // 🆕 AJOUT
       roles: ['ADMIN', 'COMPTABLE'],
       permission: 'amortissements.view',
       children: [
@@ -226,6 +249,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
     {
       labelKey: 'navReports',
       icon: DocumentTextIcon,
+      module: 'REPORTING_AVANCE',                               // 🆕 AJOUT
       roles: ['ADMIN', 'DG', 'COMPTABLE', 'TECHNICIEN'],
       permission: 'rapports.view',
       children: [
@@ -237,10 +261,10 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
         { labelKey: 'navEtats', path: '/etats', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
       ],
     },
-
     {
       labelKey: 'navPermissions',
       icon: ShieldCheckIcon,
+      // 🆕 PAS DE MODULE — admin only
       roles: ['ADMIN'],
       permission: 'permission.gerer',
       children: [
@@ -252,12 +276,14 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
       labelKey: 'navImport',
       path: '/import',
       icon: ArrowUpTrayIcon,
+      module: 'IMPORT_CSV',                                     // 🆕 AJOUT
       roles: ['ADMIN'],
       permission: 'import.executer',
     },
     {
       labelKey: 'navAI',
       icon: SparklesIcon,
+      module: 'IMMOBILISATION',                                 // 🆕 AJOUT
       roles: ['ADMIN', 'DG', 'COMPTABLE', 'MAGASINIER', 'TECHNICIEN'],
       permission: 'dashboard.view',
       children: [
@@ -266,17 +292,18 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
         { labelKey: 'navAIPredictions', path: '/ia/alertes-achat', roles: ['ADMIN', 'DG', 'COMPTABLE'] },
       ],
     },
-
     {
       labelKey: 'navOrganisations',
       path: '/organisations',
       icon: BuildingOfficeOutline,
+      platformOnly: true,                                       // 🆕 5.23-bis
       roles: ['ADMIN'],
       permission: 'organisation.voir',
     },
     {
       labelKey: 'navSaaS',
       icon: CreditCardIcon,
+      // 🆕 PAS DE MODULE — admin plateforme
       roles: ['ADMIN', 'DG'],
       permission: 'abonnement.voir',
       children: [
@@ -287,6 +314,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
     {
       labelKey: 'navProjets',
       icon: FolderOpenIcon,
+      module: 'PROJET',                                         // 🆕 AJOUT
       roles: ['ADMIN', 'DG', 'RESPONSABLE_PROJET', 'LOGISTICIEN'],
       permission: 'projet.voir',
       children: [
@@ -297,6 +325,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
       labelKey: 'navWorkflowConfig',
       path: '/workflow',
       icon: AdjustmentsHorizontalIcon,
+      module: 'WORKFLOW_PERSONNALISE',                          // 🆕 AJOUT
       roles: ['ADMIN'],
       permission: 'workflow.voir',
     },
@@ -304,6 +333,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
       labelKey: 'navAudit',
       path: '/audit/journal',
       icon: ClipboardDocumentCheckIcon,
+      module: 'IMMOBILISATION',                                 // 🆕 AJOUT
       roles: ['ADMIN', 'DG'],
       permission: 'audit.view',
     },
@@ -311,10 +341,12 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
       labelKey: 'navNotifications',
       path: '/notifications',
       icon: BellIcon,
+      // 🆕 PAS DE MODULE — toujours visible
       roles: ['ADMIN', 'DG', 'COMPTABLE', 'TECHNICIEN', 'CAISSE', 'MAGASINIER'],
       permission: 'notifications.history.view',
     },
   ];
+  // ═══ FIN MODIF 5.23 ═══
 
   const filteredItems = menuItems.filter(canAccessItem);
 
@@ -377,7 +409,12 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
                     {item.children
                       .filter((child) => {
                         if (hasRole('COMPTABLE') && child.labelKey === 'navPartsMgmt') return false;
-                        return hasRole(child.roles) && (!child.permission || hasPermission(child.permission)) && canAccessPath(child.path);
+                        return (
+                          hasRole(child.roles) &&
+                          (!child.permission || hasPermission(child.permission)) &&
+                          (!child.module || hasModule(child.module)) &&   // 🆕 AJOUT
+                          canAccessPath(child.path)
+                        );
                       })
                       .map((child, cidx) => (
                         <NavLink
@@ -447,7 +484,12 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
                       {item.children
                         .filter((child) => {
                           if (hasRole('COMPTABLE') && child.labelKey === 'navPartsMgmt') return false;
-                          return hasRole(child.roles) && (!child.permission || hasPermission(child.permission)) && canAccessPath(child.path);
+                          return (
+                            hasRole(child.roles) &&
+                            (!child.permission || hasPermission(child.permission)) &&
+                            (!child.module || hasModule(child.module)) &&   // 🆕 AJOUT
+                            canAccessPath(child.path)
+                          );
                         })
                         .map((child, cidx) => (
                           <NavLink

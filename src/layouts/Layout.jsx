@@ -4,6 +4,7 @@ import { PageActionsProvider } from '../context/PageActionsContext';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import PermissionRoute from '../routes/PermissionRoute';
+import ModuleNotActiveBanner from '../components/common/ModuleNotActiveBanner';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
@@ -29,29 +30,34 @@ const Layout = () => {
   return (
     <PageActionsProvider>
       <div className="min-h-screen bg-canvas-light dark:bg-canvas-dark transition-colors">
-          <Header
-            onMenuToggle={() => setSidebarOpen((v) => !v)}
-            sidebarCollapsed={sidebarCollapsed}
-            onSidebarCollapse={() => setSidebarCollapsed((v) => !v)}
+        <Header
+          onMenuToggle={() => setSidebarOpen((v) => !v)}
+          sidebarCollapsed={sidebarCollapsed}
+          onSidebarCollapse={() => setSidebarCollapsed((v) => !v)}
+          isLarge={isLarge}
+        />
+
+        {/* ═══ AJOUT 5.23-bis — Bannière module non activé ═══ */}
+        <ModuleNotActiveBanner />
+        {/* ═══ FIN AJOUT ═══ */}
+
+        <div className="flex pt-16">
+          <Sidebar
+            isOpen={sidebarOpen}
+            setIsOpen={setSidebarOpen}
+            collapsed={sidebarCollapsed}
             isLarge={isLarge}
           />
-          <div className="flex pt-16">
-            <Sidebar
-              isOpen={sidebarOpen}
-              setIsOpen={setSidebarOpen}
-              collapsed={sidebarCollapsed}
-              isLarge={isLarge}
-            />
-            <main className={`app-main ${sidebarWidth}`}>
-              <div className="app-main-inner">
-                <PermissionRoute>
-                  <Outlet />
-                </PermissionRoute>
-              </div>
-            </main>
-          </div>
+          <main className={`app-main ${sidebarWidth}`}>
+            <div className="app-main-inner">
+              <PermissionRoute>
+                <Outlet />
+              </PermissionRoute>
+            </div>
+          </main>
         </div>
-      </PageActionsProvider>
+      </div>
+    </PageActionsProvider>
   );
 };
 

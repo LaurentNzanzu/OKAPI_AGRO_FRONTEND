@@ -1741,5 +1741,25 @@
     "roleHelp": "Ex : LOGISTICIEN, DG...",
     "permissionHelp": "Ex : MISSION_VALIDATE_LOG",
     "conditionHelp": "Ex : {\"seuil_montant\": 1000}"
+  },
+
+  "moduleNotActive": {
+    "title": "Module non activé",
+    "message": "Le module \"{{module}}\" n'est pas inclus dans votre abonnement. Contactez votre administrateur."
+  },
+    "forceChangePassword": {
+    "title": "Changement de mot de passe requis",
+    "subtitle": "Pour des raisons de sécurité, vous devez changer votre mot de passe temporaire avant de continuer.",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "submit": "Valider et continuer",
+    "submitting": "Enregistrement...",
+    "errorMismatch": "Les mots de passe ne correspondent pas.",
+    "errorRules": "Le mot de passe ne respecte pas toutes les règles.",
+    "errorGeneric": "Erreur inattendue. Veuillez réessayer.",
+    "ruleLength": "Au moins 8 caractères",
+    "ruleUpper": "Au moins 1 majuscule",
+    "ruleLower": "Au moins 1 minuscule",
+    "ruleDigit": "Au moins 1 chiffre"
   }
 }
