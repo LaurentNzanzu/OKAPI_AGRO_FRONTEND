@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { PHONE_PREFIXES, cleanLocalPhone, splitPhone, buildPhone, userErrorMessage } from './utilisateurForm';
 import {
   PencilSquareIcon,
   TrashIcon,
@@ -22,7 +24,7 @@ const actionBtnText =
   'inline-flex items-center justify-center gap-1.5 h-9 px-2.5 rounded-lg border text-xs font-medium transition-colors shrink-0 whitespace-nowrap';
 
 const GestionUtilisateurs = () => {
-    const { user, hasPermission } = useAuth();
+    const { hasPermission } = useAuth();
     const { t } = useLanguage();
     const [utilisateurs, setUtilisateurs] = useState([]);
     const [roles, setRoles] = useState([]);
@@ -35,8 +37,15 @@ const GestionUtilisateurs = () => {
         prenom: '',
         telephone: '',
         role_id: '',
-        mot_de_passe: ''
+        post_nom: ''
     });
+    const [phonePrefix, setPhonePrefix] = useState('+243');
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [createdUser, setCreatedUser] = useState(null);
+    const [copied, setCopied] = useState(false);
+    const [copyError, setCopyError] = useState(null);
+    const [saving, setSaving] = useState(false);
+    const submitting = useRef(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
 
@@ -51,7 +60,7 @@ const GestionUtilisateurs = () => {
             const data = await utilisateursService.getAll();
             setUtilisateurs(data.items || []);
         } catch (err) {
-            setError('Erreur chargement utilisateurs');
+            setError(userErrorMessage(err, t('userWorkflow.loadError')));
         } finally {
             setLoading(false);
         }
@@ -81,30 +90,46 @@ const GestionUtilisateurs = () => {
     };
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (submitting.current) return;
+        setError(null);
         
         // ✅ Validation des données avant envoi
         if (!formData.role_id) {
-            setError('Veuillez sélectionner un rôle');
+            setError(t('userWorkflow.selectRole'));
             setTimeout(() => setError(null), 3000);
             return;
         }
         
+        const originalPhone = editingUser ? splitPhone(editingUser.telephone || '') : null;
+        const phoneUnchanged = originalPhone && phonePrefix === originalPhone.prefix && phoneNumber === originalPhone.number;
+        const telephone = buildPhone(phonePrefix, phoneNumber);
+        if (!phoneUnchanged && telephone === undefined) {
+            setError(t('userWorkflow.invalidPhone'));
+            return;
+        }
+        const payload = { ...formData, telephone };
+        if (phoneUnchanged) delete payload.telephone;
+        submitting.current = true;
+        setSaving(true);
         try {
             if (editingUser) {
-                await utilisateursService.update(editingUser.id, formData);
-                setSuccess('Utilisateur modifié avec succès');
+                await utilisateursService.update(editingUser.id, payload);
+                setSuccess(t('userWorkflow.updated'));
             } else {
-                await utilisateursService.create(formData);
-                setSuccess('Utilisateur créé avec succès');
+                const created = await utilisateursService.create(payload);
+                setCreatedUser(created);
+                setCopied(false);
+                setCopyError(null);
+                setSuccess(null);
             }
             setShowModal(false);
-            setFormData({ email: '', nom: '', prenom: '', telephone: '', role_id: '', mot_de_passe: '' });
+            setFormData({ email: '', nom: '', prenom: '', telephone: '', role_id: '', post_nom: '' });
             setEditingUser(null);
             fetchUtilisateurs();
             setTimeout(() => setSuccess(null), 3000);
         } catch (err) {
             // ✅ Extraction correcte du message d'erreur
-            let errorMessage = 'Erreur lors de l\'enregistrement';
+            let errorMessage = t('userWorkflow.saveError');
             
             if (err.response?.data?.detail) {
                 if (Array.isArray(err.response.data.detail)) {
@@ -117,7 +142,9 @@ const GestionUtilisateurs = () => {
             }
             
             setError(errorMessage);
-            setTimeout(() => setError(null), 5000);
+        } finally {
+            submitting.current = false;
+            setSaving(false);
         }
     };
     const handleToggleActif = async (id, actif) => {
@@ -125,7 +152,7 @@ const GestionUtilisateurs = () => {
             await utilisateursService.toggleActif(id, !actif);
             fetchUtilisateurs();
         } catch (err) {
-            setError('Erreur lors du changement de statut');
+            setError(userErrorMessage(err, t('userWorkflow.saveError')));
         }
     };
 
@@ -135,11 +162,11 @@ const GestionUtilisateurs = () => {
             await utilisateursService.delete(id);
             fetchUtilisateurs();
         } catch (err) {
-            setError('Erreur lors de la suppression');
+            setError(userErrorMessage(err, t('userWorkflow.saveError')));
         }
     };
 
-    if (loading) {
+    if (loading && !createdUser && !showModal) {
         return <div className="text-center py-12">Chargement...</div>;
     }
 
@@ -154,7 +181,10 @@ const GestionUtilisateurs = () => {
                     <Button
                         onClick={() => {
                             setEditingUser(null);
-                            setFormData({ email: '', nom: '', prenom: '', telephone: '', role_id: '', mot_de_passe: '' });
+                            setFormData({ email: '', nom: '', prenom: '', telephone: '', role_id: '', post_nom: '' });
+                            setPhonePrefix('+243');
+                            setPhoneNumber('');
+                            setError(null);
                             setShowModal(true);
                         }}
                     >
@@ -188,7 +218,7 @@ const GestionUtilisateurs = () => {
                         <tbody>
                             {utilisateurs.map((u) => (
                                 <tr key={u.id}>
-                                    <td className="px-4 py-3 text-sm">{u.prenom} {u.nom}</td>
+                                    <td className="px-4 py-3 text-sm"><Link className="text-primary-600 hover:underline" to={`/utilisateurs/${u.id}`}>{[u.prenom, u.nom, u.post_nom].filter(Boolean).join(' ')}</Link></td>
                                     <td className="px-4 py-3 text-sm">{u.email}</td>
                                     <td className="px-4 py-3 text-sm">{u.telephone || '-'}</td>
                                     <td className="px-4 py-3 text-sm">
@@ -209,13 +239,17 @@ const GestionUtilisateurs = () => {
                                                 aria-label="Modifier"
                                                 onClick={() => {
                                                     setEditingUser(u);
+                                                    const phone = splitPhone(u.telephone || '');
+                                                    setPhonePrefix(phone.prefix);
+                                                    setPhoneNumber(phone.number);
+                                                    setError(null);
                                                     setFormData({
                                                         email: u.email,
                                                         nom: u.nom,
                                                         prenom: u.prenom,
                                                         telephone: u.telephone || '',
                                                         role_id: u.role_id,
-                                                        mot_de_passe: ''
+                                                        post_nom: u.post_nom || ''
                                                     });
                                                     setShowModal(true);
                                                 }}
@@ -267,59 +301,69 @@ const GestionUtilisateurs = () => {
             {/* Modal Création/Modification */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="modal-panel p-6 w-full max-w-md">
-                        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-slate-100">
-                            {editingUser ? 'Modifier l\'utilisateur' : 'Ajouter un utilisateur'}
+                    <div role="dialog" aria-modal="true" aria-labelledby="user-form-title" className="modal-panel p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+                        <h2 id="user-form-title" className="text-xl font-bold mb-4 text-gray-900 dark:text-slate-100">
+                            {editingUser ? t('userWorkflow.editTitle') : t('userWorkflow.addTitle')}
                         </h2>
+                        {error && <div role="alert" className="alert-error">{error}</div>}
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="form-label">Email *</label>
+                                <label htmlFor="user-email" className="form-label">{t('userWorkflow.email')} *</label>
                                 <input
                                     type="email"
                                     required
-                                    value={formData.email}
+                                    id="user-email" value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                     className="form-input"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="form-label">Prénom *</label>
+                                    <label htmlFor="user-prenom" className="form-label">{t('userWorkflow.prenom')} *</label>
                                     <input
                                         required
-                                        value={formData.prenom}
+                                        id="user-prenom" value={formData.prenom}
                                         onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
                                         className="form-input"
                                     />
                                 </div>
                                 <div>
-                                    <label className="form-label">Nom *</label>
+                                    <label htmlFor="user-nom" className="form-label">{t('userWorkflow.nom')} *</label>
                                     <input
                                         required
-                                        value={formData.nom}
+                                        id="user-nom" value={formData.nom}
                                         onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
                                         className="form-input"
                                     />
                                 </div>
                             </div>
                             <div>
-                                <label className="form-label">Téléphone</label>
-                                <input
-                                    type="tel"
-                                    value={formData.telephone}
-                                    onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
-                                    className="form-input"
-                                />
+                                <label htmlFor="user-post-nom" className="form-label">{t('userWorkflow.postNom')}</label>
+                                <input id="user-post-nom" value={formData.post_nom} onChange={(e) => setFormData({ ...formData, post_nom: e.target.value })} className="form-input" />
                             </div>
                             <div>
-                                <label className="form-label">Rôle *</label>
+                                <label htmlFor="user-phone-number" className="form-label">{t('userWorkflow.telephone')}</label>
+                                <div className="flex gap-2">
+                                    <input aria-label={t('userWorkflow.prefix')} list="user-phone-prefixes" value={phonePrefix}
+                                        onChange={(e) => setPhonePrefix('+' + e.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
+                                        className="form-input w-28 shrink-0" inputMode="tel" maxLength={4} />
+                                    <datalist id="user-phone-prefixes">{PHONE_PREFIXES.map((prefix) => <option key={prefix} value={prefix} />)}</datalist>
+                                    <input id="user-phone-number" type="text" inputMode="numeric" pattern={editingUser && phoneNumber === splitPhone(editingUser.telephone || '').number ? undefined : '[0-9]{1,10}'} maxLength={10}
+                                        value={phoneNumber} onChange={(e) => setPhoneNumber(cleanLocalPhone(e.target.value))}
+                                        className="form-input min-w-0" aria-describedby="user-phone-help" />
+                                </div>
+                                <p id="user-phone-help" className="text-xs text-gray-500 mt-1">{t('userWorkflow.phoneHelp')}</p>
+                            </div>
+                            <div>
+                                <label htmlFor="user-role" className="form-label">{t('userWorkflow.role')} *</label>
                                 <select
+                                    id="user-role"
                                     required
                                     value={formData.role_id}
                                     onChange={(e) => setFormData({ ...formData, role_id: parseInt(e.target.value) })}
                                     className="form-input"
                                 >
-                                    <option value="">Sélectionner un rôle</option>
+                                    <option value="">{t('userWorkflow.selectRole')}</option>
                                     {roles.map((r) => (
                                         <option key={r.id_role} value={r.id_role}>
                                             {r.nom}  
@@ -327,26 +371,45 @@ const GestionUtilisateurs = () => {
                                     ))}
                                 </select>
                             </div>
-                            {!editingUser && (
-                                <div>
-                                    <label className="form-label">Mot de passe *</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        value={formData.mot_de_passe}
-                                        onChange={(e) => setFormData({ ...formData, mot_de_passe: e.target.value })}
-                                        className="form-input"
-                                        placeholder="Minimum 6 caractères"
-                                    />
-                                </div>
-                            )}
                             <div className="flex justify-end gap-3 pt-4">
-                                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded">Annuler</button>
-                                <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700">
-                                    {editingUser ? 'Modifier' : 'Créer'}
+                                <button type="button" disabled={saving} onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 dark:bg-slate-800 rounded">{t('userWorkflow.cancel')}</button>
+                                <button type="submit" disabled={saving} className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700">
+                                    {saving ? t('userWorkflow.saving') : editingUser ? t('userWorkflow.save') : t('userWorkflow.create')}
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {createdUser && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div role="dialog" aria-modal="true" aria-labelledby="created-user-title"
+                        onKeyDown={(e) => { if (e.key === 'Escape') { setCreatedUser(null); setCopied(false); setCopyError(null); } }}
+                        className="modal-panel p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                        <h2 id="created-user-title" className="text-xl font-bold mb-4">{t('userWorkflow.created')}</h2>
+                        <dl className="space-y-2 break-words">
+                            <dt className="font-medium">{t('userWorkflow.fullName')}</dt>
+                            <dd>{[createdUser.prenom, createdUser.nom, createdUser.post_nom].filter(Boolean).join(' ')}</dd>
+                            <dt className="font-medium">{t('userWorkflow.email')}</dt><dd>{createdUser.email}</dd>
+                            <dt className="font-medium">{t('userWorkflow.telephone')}</dt><dd>{createdUser.telephone || '—'}</dd>
+                            <dt className="font-medium">{t('userWorkflow.role')}</dt><dd>{createdUser.role_nom}</dd>
+                            <dt className="font-medium">{t('userWorkflow.temporaryPassword')}</dt>
+                            <dd className="font-mono select-all p-3 bg-gray-100 dark:bg-slate-800 rounded">{createdUser.mot_de_passe_temporaire}</dd>
+                        </dl>
+                        <p className="my-4 text-sm">{t('userWorkflow.credentialsWarning')}</p>
+                        {copyError && <p role="alert" className="alert-error">{copyError}</p>}
+                        <div className="flex justify-end gap-3">
+                            <Button variant="secondary" onClick={async () => {
+                                try {
+                                    await navigator.clipboard.writeText(createdUser.mot_de_passe_temporaire);
+                                    setCopied(true);
+                                    setCopyError(null);
+                                } catch {
+                                    setCopyError(t('userWorkflow.copyError'));
+                                }
+                            }}>{copied ? t('userWorkflow.copied') : t('userWorkflow.copyPassword')}</Button>
+                            <Button autoFocus onClick={() => { setCreatedUser(null); setCopied(false); setCopyError(null); }}>{t('userWorkflow.close')}</Button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -65,6 +65,7 @@ import {
   HistoriqueNotifications,
   JournalAudit,
   GestionUtilisateurs,
+  FicheUtilisateur,
   GestionPermissions,
   RapportsFinanciers,
   RapportsTechniques,
@@ -228,6 +229,7 @@ function App() {
                   <Route path="audit/historique" element={<Navigate to="/audit/journal" replace />} />
 
                   <Route path="utilisateurs" element={<Lazy><GestionUtilisateurs /></Lazy>} />
+                  <Route path="utilisateurs/:id" element={<Lazy><FicheUtilisateur /></Lazy>} />
                   <Route path="utilisateurs/permissions" element={<Lazy><GestionPermissions /></Lazy>} />
 
                   <Route path="rapports" element={<Navigate to="/rapports/financiers" replace />} />

@@ -123,3 +123,4 @@ export const ListePermissions = lazy(() => import('../components/permissions/Lis
 export const GestionPermissionsRole = lazy(() => import('../components/permissions/GestionPermissionsRole'));
 export const ImportCSV = lazy(() => import('../components/import/ImportCSV'));
 export const ForceChangePasswordPage = lazy(() => import('../pages/ForceChangePasswordPage'));
+export const FicheUtilisateur = lazy(() => import('../components/utilisateurs/FicheUtilisateur'));
