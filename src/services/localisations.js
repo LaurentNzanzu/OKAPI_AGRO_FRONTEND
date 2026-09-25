@@ -51,6 +51,16 @@ export const localisationsService = {
    * Utilisé pour les listes déroulantes
    * @returns {Promise<Array>} Liste de toutes les localisations
    */
+  getAllForSelection: async () => {
+    const items = [];
+    const limit = 1000;
+    for (let skip = 0; ; skip += limit) {
+      const page = await localisationsService.getAll({ skip, limit });
+      items.push(...page);
+      if (page.length < limit) return items;
+    }
+  },
+
   getAllActifs: async () => {
     const response = await api.get(`${BASE_URL}/all`);
     // Même logique de sécurité

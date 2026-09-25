@@ -646,14 +646,18 @@ const FournisseurAutocomplete = ({ value, onChange, onBlur, errors, disabled = f
 // ============================================================
 // COMPOSANT : LocalisationModal
 // ============================================================
-const LocalisationModal = ({ isOpen, onClose, onSave, existingNames = [] }) => {
+const normalizeLocalisation = (name) => name.trim().replace(/\s+/g, ' ').toUpperCase();
+
+const LocalisationModal = ({ isOpen, onClose, onSave, existingNames = [], initialName = '' }) => {
   const [nomLocalisation, setNomLocalisation] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isOpen) { setNomLocalisation(''); setError(''); setSubmitting(false); }
-  }, [isOpen]);
+    if (isOpen) { setNomLocalisation(initialName); setError(''); setSubmitting(false); }
+  }, [isOpen, initialName]);
+
+  const alreadyExists = existingNames.some(name => normalizeLocalisation(name) === normalizeLocalisation(nomLocalisation));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -663,17 +667,14 @@ const LocalisationModal = ({ isOpen, onClose, onSave, existingNames = [] }) => {
       setError('Le nom de la localisation est requis');
       return;
     }
-    if (existingNames.some(name => name.toUpperCase() === trimmed.toUpperCase())) {
-      setError('Cette localisation existe déjà');
-      return;
-    }
+    if (submitting) return;
     setSubmitting(true);
     try {
       const result = await onSave({ nom_localisation: trimmed });
       if (result) onClose();
     } catch (err) {
       console.error('Erreur création localisation:', err);
-      const detail = err.response?.data?.detail;
+      const detail = err.response?.data?.message || err.response?.data?.detail;
       let errorMsg = 'Erreur lors de la création';
       if (typeof detail === 'string') {
         errorMsg = detail;
@@ -693,13 +694,13 @@ const LocalisationModal = ({ isOpen, onClose, onSave, existingNames = [] }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4" onClick={() => { if (!submitting) onClose(); }}>
       <div className="bg-white dark:bg-surface-dark rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl mx-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center p-4 sm:p-5 border-b border-border-light dark:border-border-dark">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100">
             <span className="inline-flex items-center gap-2"><AppIcon icon={PlusIcon} size="sm" /> Ajouter une localisation</span>
           </h3>
-          <button className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-night-hover transition-colors" onClick={onClose}>
+          <button className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-night-hover transition-colors" onClick={() => { if (!submitting) onClose(); }}>
             <AppIcon icon={XMarkIcon} size="md" className="text-gray-500 dark:text-slate-400" />
           </button>
         </div>
@@ -711,17 +712,20 @@ const LocalisationModal = ({ isOpen, onClose, onSave, existingNames = [] }) => {
             <input
               type="text"
               value={nomLocalisation}
+              maxLength={200}
+              disabled={submitting}
               onChange={(e) => { setNomLocalisation(e.target.value); setError(''); }}
               className={`w-full px-3 py-2 text-sm sm:text-base border rounded-lg bg-white dark:bg-surface-dark text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${error ? 'border-danger' : 'border-border-light dark:border-border-dark'}`}
               placeholder="Ex: Entrepôt Principal, Bureau 101, Atelier Sud..."
               autoFocus
             />
+            {alreadyExists && <p className="text-sm text-gray-600 mt-2">Cette localisation existe déjà. Vous pouvez l’utiliser.</p>}
             {error && <span className="text-sm text-danger mt-1">{error}</span>}
           </div>
           <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 pt-4 border-t border-border-light dark:border-border-dark">
-            <button type="button" className="px-4 py-2 bg-gray-100 dark:bg-night-muted text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-night-hover rounded-lg transition-colors w-full sm:w-auto" onClick={onClose}>Annuler</button>
+            <button type="button" className="px-4 py-2 bg-gray-100 dark:bg-night-muted text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-night-hover rounded-lg transition-colors w-full sm:w-auto" onClick={() => { if (!submitting) onClose(); }}>Annuler</button>
             <button type="submit" className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto" disabled={submitting}>
-              {submitting ? 'Création...' : 'Ajouter'}
+              {submitting ? 'Enregistrement...' : alreadyExists ? 'Utiliser cette localisation' : 'Ajouter'}
             </button>
           </div>
         </form>
@@ -1148,6 +1152,7 @@ const NouveauBien = () => {
   const [typesLoading, setTypesLoading] = useState(true);
   const [localisations, setLocalisations] = useState([]);
   const [localisationsLoading, setLocalisationsLoading] = useState(true);
+  const [localisationSearch, setLocalisationSearch] = useState('');
 
   // --- États pour les options de champs (création rapide) ---
   const [marqueOptions, setMarqueOptions] = useState([]);
@@ -1248,7 +1253,7 @@ const NouveauBien = () => {
         setTypesBiens(types);
 
         // Charger les localisations
-        const locs = await localisationsService.getAll();
+        const locs = await localisationsService.getAllForSelection();
         setLocalisations(locs);
 
         // Charger les options pour les champs de sélection rapide
@@ -1601,9 +1606,11 @@ const NouveauBien = () => {
       return;
     }
     try {
-      const result = await localisationsService.create({ nom_localisation: nom.trim() });
-      setLocalisations(prev => [...prev, result]);
-      setFormData(prev => ({ ...prev, id_localisation: result.id_localisation }));
+      const result = localisations.find(loc => normalizeLocalisation(loc.nom_localisation) === normalizeLocalisation(nom))
+        || await localisationsService.create({ nom_localisation: nom.trim() });
+      setLocalisations(prev => prev.some(loc => loc.id_localisation === result.id_localisation) ? prev : [...prev, result]);
+      handleChange('id_localisation', result.id_localisation);
+      setLocalisationSearch('');
       return result;
     } catch (err) {
       console.error('Erreur création localisation:', err);
@@ -1803,6 +1810,15 @@ const NouveauBien = () => {
         <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
           {t('assets.fieldLocalisation')} <span className="text-danger">*</span>
         </label>
+        <input
+          type="search"
+          aria-label="Rechercher une localisation"
+          placeholder="Rechercher une localisation..."
+          value={localisationSearch}
+          onChange={(e) => setLocalisationSearch(e.target.value)}
+          disabled={localisationsLoading}
+          className="w-full px-3 py-2 mb-2 border rounded-lg bg-white dark:bg-surface-dark"
+        />
         <div className="relative flex items-center">
           <select
             value={formData.id_localisation || ''}
@@ -1811,7 +1827,7 @@ const NouveauBien = () => {
             disabled={localisationsLoading}
           >
             <option value="">Sélectionnez une localisation...</option>
-            {localisations.map((loc) => (
+            {localisations.filter(loc => loc.id_localisation === Number(formData.id_localisation) || normalizeLocalisation(loc.nom_localisation).includes(normalizeLocalisation(localisationSearch))).map((loc) => (
               <option key={loc.id_localisation} value={loc.id_localisation}>
                 {loc.nom_localisation}
               </option>
@@ -1820,12 +1836,19 @@ const NouveauBien = () => {
           <button
             type="button"
             className="absolute right-1.5 p-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-md transition-colors"
-            onClick={() => setShowNewLocalisation(true)}
+            onClick={() => { setNewLocalisationValue(localisationSearch.trim()); setShowNewLocalisation(true); }}
+            disabled={localisationsLoading}
             title="Ajouter une localisation"
           >
             <AppIcon icon={PlusIcon} size="sm" />
           </button>
         </div>
+        {localisationSearch.trim() && !localisationsLoading && !localisations.some(loc => normalizeLocalisation(loc.nom_localisation) === normalizeLocalisation(localisationSearch)) && (
+          <button type="button" className="text-primary-600 text-sm mt-2"
+            onClick={() => { setNewLocalisationValue(localisationSearch.trim()); setShowNewLocalisation(true); }}>
+            Créer « {localisationSearch.trim()} »
+          </button>
+        )}
         {fieldErrors.id_localisation && <span className="text-sm text-danger mt-1">{fieldErrors.id_localisation}</span>}
         {localisationsLoading && <span className="text-sm text-gray-500 dark:text-slate-400 mt-1">Chargement des localisations...</span>}
       </div>
@@ -2072,6 +2095,7 @@ const NouveauBien = () => {
         onClose={() => { setShowNewLocalisation(false); setNewLocalisationValue(''); }}
         onSave={handleQuickAddLocalisation}
         existingNames={localisations.map(l => l.nom_localisation)}
+        initialName={newLocalisationValue}
       />
 
       {/* Modal Nouveau Type de Bien */}
