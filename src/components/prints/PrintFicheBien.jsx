@@ -72,7 +72,7 @@ const PrintFicheBien = () => {
         </PrintButton>
       </PrintActionBar>
 
-      <PrintHeader
+      <PrintHeader organisation={data.organisation}
         title={t('prints.ficheBien.title')}
         subtitle={`${getTypeLabel(bien.type_bien) || bien.type_bien} • ${designation || t('prints.ficheBien.assetPrefix', { id: bien.id_bien })}`}
         documentRef={bien.qr_code}
@@ -175,7 +175,7 @@ const PrintFicheBien = () => {
         />
       </PrintSection>
 
-      <PrintFooter />
+      <PrintFooter organisation={data.organisation} />
     </div>
   );
 };

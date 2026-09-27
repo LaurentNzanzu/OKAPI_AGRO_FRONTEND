@@ -1,5 +1,7 @@
 // src/context/AuthContext.jsx
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { AUTH_UNAVAILABLE, authErrorMessage } from '../utils/authError';
+import { AuthAlert } from '../components/auth/AuthUI';
 import authService from '../services/auth';
 import { userHasPermission, hasRole as permHasRole, hasAnyRole as permHasAnyRole } from '../config/permissions';
 
@@ -37,6 +39,10 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [serviceUnavailable, setServiceUnavailable] = useState(false);
+  const authGeneration = useRef(0);
+
 
   // ═══ AJOUT 5.23 ═══
   const [activeModules, setActiveModules] = useState([]);
@@ -50,109 +56,61 @@ export const AuthProvider = ({ children }) => {
     setOrganisationId(extractOrganisationId(userData));
   }, []);
 
-  // Vérification de l'état initial
-  useEffect(() => {
-    const initializeAuth = async () => {
-      setLoading(true);
-      try {
-        if (import.meta.env.DEV) {
-          console.log('[Auth] Initialisation...');
-        }
-
-        const token = authService.getAccessToken();
-
-        // CAS 1 : Token présent mais expiré → Tentative de refresh
-        if (token && authService.isTokenExpired()) {
-          if (import.meta.env.DEV) {
-            console.warn('[Auth] Token expiré, tentative de refresh...');
-          }
-
-          try {
-            const refreshResult = await authService.refreshToken();
-
-            if (refreshResult.success) {
-              if (import.meta.env.DEV) {
-                console.log('[Auth] Refresh réussi !');
-              }
-
-              const userResult = await authService.getCurrentUser();
-              if (userResult.success) {
-                applyUser(userResult.data);
-                setIsAuthenticated(true);
-                setAuthReady(true);
-              } else {
-                throw new Error('Échec récupération utilisateur après refresh');
-              }
-            } else {
-              if (import.meta.env.DEV) {
-                console.warn('[Auth] Refresh échoué, déconnexion...');
-              }
-              authService.clearTokens();
-              setIsAuthenticated(false);
-              setAuthReady(true);
-              window.location.href = '/login';
-              return;
-            }
-          } catch (refreshError) {
-            console.error('[Auth] Erreur refresh:', refreshError);
-            authService.clearTokens();
-            setIsAuthenticated(false);
-            setAuthReady(true);
-            window.location.href = '/login';
-            return;
-          }
-        }
-        // CAS 2 : Token présent et valide → Récupération normale
-        else if (token && !authService.isTokenExpired()) {
-          if (import.meta.env.DEV) {
-            console.log('[Auth] Token valide, récupération utilisateur...');
-          }
-
-          const result = await authService.getCurrentUser();
-          if (result.success) {
-            applyUser(result.data);
-            setIsAuthenticated(true);
-            setAuthReady(true);
-          } else {
-            authService.clearTokens();
-            setIsAuthenticated(false);
-            setAuthReady(true);
-          }
-        }
-        // CAS 3 : Pas de token → Vérifier cookie Refresh Token
-        else {
-          if (import.meta.env.DEV) {
-            console.log('[Auth] Pas de token, vérification cookie...');
-          }
-
-          try {
-            const userResult = await authService.getCurrentUser();
-            if (userResult.success) {
-              applyUser(userResult.data);
-              setIsAuthenticated(true);
-              setAuthReady(true);
-            } else {
-              setIsAuthenticated(false);
-              setAuthReady(true);
-            }
-          } catch (error) {
-            console.warn('[Auth] Pas de session active, redirection vers login');
-            setIsAuthenticated(false);
-            setAuthReady(true);
-          }
-        }
-      } catch (error) {
-        console.error('[Auth] Erreur d\'initialisation:', error);
-        authService.clearTokens();
+  const initializeAuth = useCallback(async () => {
+    const generation = ++authGeneration.current;
+    setLoading(true);
+    setAuthError('');
+    try {
+      // /me also supports the access cookie. Its interceptor refreshes at most once.
+      const result = await authService.getCurrentUser();
+      if (generation !== authGeneration.current) return;
+      if (result.success) {
+        applyUser(result.data);
+        setIsAuthenticated(true);
+        setServiceUnavailable(false);
+      } else if (result.status !== 401) {
+        setAuthError(result.error || AUTH_UNAVAILABLE);
+      } else {
+        applyUser(null);
         setIsAuthenticated(false);
+      }
+    } catch {
+      if (generation === authGeneration.current) setAuthError(AUTH_UNAVAILABLE);
+    } finally {
+      if (generation === authGeneration.current) {
         setAuthReady(true);
-      } finally {
         setLoading(false);
       }
-    };
-
-    initializeAuth();
+    }
   }, [applyUser]);
+
+  useEffect(() => {
+    const clear = () => {
+      ++authGeneration.current;
+      applyUser(null);
+      setIsAuthenticated(false);
+      setAuthError('');
+      setServiceUnavailable(false);
+      setAuthReady(true);
+      setLoading(false);
+    };
+    const unavailable = () => setServiceUnavailable(true);
+    window.addEventListener('auth-cleared', clear);
+    window.addEventListener('auth-unavailable', unavailable);
+    // Public password links must not compete with cookie refresh/session rotation.
+    if (['/login', '/forgot-password', '/reset-password'].includes(window.location.pathname)) {
+      setAuthReady(true);
+      setLoading(false);
+    } else {
+      initializeAuth();
+    }
+    const lifecycle = authGeneration;
+    return () => {
+      ++lifecycle.current;
+      window.removeEventListener('auth-cleared', clear);
+      window.removeEventListener('auth-unavailable', unavailable);
+    };
+  }, [initializeAuth, applyUser]);
 
   // === LOGIN ===
   const login = useCallback(async (email, password) => {
@@ -160,16 +118,25 @@ export const AuthProvider = ({ children }) => {
       const result = await authService.login(email, password);
 
       if (result.success) {
+        ++authGeneration.current;
+        setAuthError('');
+        setServiceUnavailable(false);
         applyUser(result.data.user);
         setIsAuthenticated(true);
         return { success: true, data: result.data };
       }
 
-      return { success: false, error: result.error };
+      return {
+        success: false,
+        error: result.error,
+        status: result.status,
+        retryAfter: result.retryAfter,
+        remainingAttempts: result.remainingAttempts,
+      };
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.detail || 'Erreur de connexion',
+        error: authErrorMessage(error),
       };
     }
   }, [applyUser]);
@@ -178,8 +145,8 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(async () => {
     try {
       await authService.logout();
-    } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
+    } catch {
+      console.warn('La déconnexion distante a échoué.');
     } finally {
       setUser(null);
       setIsAuthenticated(false);
@@ -191,32 +158,36 @@ export const AuthProvider = ({ children }) => {
 
   // === REFRESH ===
   const refreshToken = useCallback(async () => {
-    try {
-      const result = await authService.refreshToken();
-      if (result.success) {
-        const userResult = await authService.getCurrentUser();
-        if (userResult.success) {
-          applyUser(userResult.data);
-          setIsAuthenticated(true);
-        }
-        return { success: true };
-      }
-      await logout();
-      return { success: false, error: result.error };
-    } catch (error) {
-      await logout();
-      return {
-        success: false,
-        error: error.response?.data?.detail || 'Erreur de rafraîchissement',
-      };
+    const result = await authService.refreshToken();
+    if (!result.success) return result;
+    const userResult = await authService.getCurrentUser();
+    if (userResult.success) {
+      applyUser(userResult.data);
+      setIsAuthenticated(true);
+      setAuthError('');
+    } else if (userResult.status !== 401) {
+      setAuthError(userResult.error || AUTH_UNAVAILABLE);
     }
-  }, [logout, applyUser]);
+    return userResult;
+  }, [applyUser]);
 
   // === MISE À JOUR DU PROFIL ===
   const updateUser = useCallback((userData) => {
     applyUser(userData);
     authService.setUser(userData);
   }, [applyUser]);
+
+  const reloadUser = useCallback(async () => {
+    const result = await authService.getCurrentUser();
+    if (result.success) {
+      updateUser(result.data);
+      setAuthError('');
+    } else if (result.status !== 401) {
+      // Do not keep authorizing navigation with an unverified profile.
+      setAuthError(result.error || AUTH_UNAVAILABLE);
+    }
+    return result;
+  }, [updateUser]);
 
   // === PERMISSIONS HELPERS ===
   const hasPermission = useCallback((permission) => {
@@ -246,6 +217,8 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     authReady,
+    authError,
+    retryAuth: initializeAuth,
     isAuthenticated,
     authenticated: isAuthenticated,
     // ═══ AJOUT 5.23 ═══
@@ -257,6 +230,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     refreshToken,
     updateUser,
+    reloadUser,
     hasPermission,
     hasRole,
     hasAnyRole,
@@ -268,6 +242,9 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
+      {serviceUnavailable && !authError && (
+        <AuthAlert>{AUTH_UNAVAILABLE} <button type="button" onClick={() => setServiceUnavailable(false)}>Fermer</button></AuthAlert>
+      )}
       {children}
     </AuthContext.Provider>
   );

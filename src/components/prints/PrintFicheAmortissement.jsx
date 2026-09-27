@@ -60,7 +60,7 @@ const PrintFicheAmortissement = () => {
         </PrintButton>
       </PrintActionBar>
 
-      <PrintHeader
+      <PrintHeader organisation={data.organisation}
         title={t('prints.ficheAmortissement.title')}
         subtitle={`${(bien.type_bien || '').toUpperCase()} • ${designation || t('prints.ficheAmortissement.assetPrefix', { id: bien.id_bien })}`}
         documentRef={bien.qr_code}
@@ -184,7 +184,7 @@ const PrintFicheAmortissement = () => {
         />
       </PrintSection>
 
-      <PrintFooter />
+      <PrintFooter organisation={data.organisation} />
     </div>
   );
 };

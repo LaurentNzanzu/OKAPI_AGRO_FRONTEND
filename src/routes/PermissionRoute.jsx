@@ -13,6 +13,7 @@ import {
 } from '../config/permissions';
 import { normalizePathname } from '../utils/redirectPath';
 import { useTranslation } from '../context/LanguageContext';
+import { AuthAlert } from '../components/auth/AuthUI';
 import authService from '../services/auth';
 
 // Composant de chargement
@@ -66,7 +67,7 @@ const PermissionRoute = ({
   requireAuth = true,
   fallbackPath = '/unauthorized'
 }) => {
-  const { authReady, user, isAuthenticated, loading } = useAuth();
+  const { authError, retryAuth, authReady, user, isAuthenticated, loading } = useAuth();
   const location = useLocation();
   const { t } = useTranslation();
 
@@ -136,6 +137,10 @@ const PermissionRoute = ({
 
     return hasAccess;
   };
+
+  if (authError && !isPublicRoute(location.pathname)) {
+    return <AuthAlert>{authError} <button type="button" onClick={retryAuth}>Réessayer</button></AuthAlert>;
+  }
 
   // Si le chargement est en cours
   if (!authReady || loading || isChecking) {

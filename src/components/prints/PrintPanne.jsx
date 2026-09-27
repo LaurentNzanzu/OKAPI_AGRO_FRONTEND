@@ -98,7 +98,7 @@ const PrintPanne = () => {
         <PrintButton variant="secondary" onClick={() => window.close()}>Fermer</PrintButton>
       </div>
 
-      <PrintHeader
+      <PrintHeader organisation={bien?.organisation}
         title="FICHE DE PANNE"
         subtitle={`Panne #${panne.id_panne}`}
         documentRef={`PANNE-${panne.id_panne}`}
@@ -176,7 +176,7 @@ const PrintPanne = () => {
         </div>
       </div>
 
-      <PrintFooter />
+      <PrintFooter organisation={bien?.organisation} />
     </div>
   );
 };

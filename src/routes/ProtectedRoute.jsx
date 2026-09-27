@@ -4,6 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { isPublicRoute, getAccessibleHomePath } from '../config/permissions';
 import { useTranslation } from '../context/LanguageContext';
+import { AuthAlert } from '../components/auth/AuthUI';
 import authService from '../services/auth';
 
 /**
@@ -20,6 +21,7 @@ const ProtectedRoute = ({
   redirectTo = '/login'
 }) => {
   const {
+    authError, retryAuth,
     authenticated,
     user,
     authReady,
@@ -103,6 +105,10 @@ const ProtectedRoute = ({
     if (!authReady && hasValidToken) return true;
     return false;
   };
+
+  if (authError && !isPublicRoute(location.pathname)) {
+    return <AuthAlert>{authError} <button type="button" onClick={retryAuth}>Réessayer</button></AuthAlert>;
+  }
 
   // État de chargement
   if (!authReady || loading || isChecking) {

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import { authErrorMessage } from '../../utils/authError';
 import { utilisateursService } from '../../services/utilisateurs';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -20,7 +21,7 @@ import {
 
 const Profil = () => {
   const { t } = useTranslation();
-    const { user, updateUser } = useAuth();
+    const { user, updateUser, reloadUser } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -98,6 +99,8 @@ const Profil = () => {
     const handlePasswordSubmit = async (e) => {
         e.preventDefault();
         
+        if (loading) return;
+
         // Validation des champs (présence des champs)
         if (!passwordData.ancien_mot_de_passe) {
             setMessage({ type: 'error', text: 'Veuillez entrer votre ancien mot de passe' });
@@ -149,7 +152,10 @@ const Profil = () => {
                 nouveau_mot_de_passe: passwordData.nouveau_mot_de_passe
             });
             
-            setMessage({ type: 'success', text: 'Mot de passe modifié avec succès !' });
+            const profile = await reloadUser();
+            setMessage({ type: profile.success ? 'success' : 'error', text: profile.success
+                ? 'Mot de passe modifié avec succès !'
+                : 'Mot de passe enregistré. Profil indisponible : rechargez la page pour réessayer.' });
             
             // Réinitialiser le formulaire
             setPasswordData({
@@ -162,16 +168,7 @@ const Profil = () => {
             setTimeout(() => setMessage({ type: '', text: '' }), 3000);
         } catch (error) {
             
-            console.error('Erreur changement mot de passe:', error);
-            let errorMessage = 'Erreur lors du changement de mot de passe';
-            if (error.response?.data?.detail) {
-                if (typeof error.response.data.detail === 'string') {
-                    errorMessage = error.response.data.detail;
-                } else if (Array.isArray(error.response.data.detail)) {
-                    errorMessage = error.response.data.detail.map(d => d.msg).join(', ');
-                }
-            }
-            setMessage({ type: 'error', text: errorMessage });
+            setMessage({ type: 'error', text: authErrorMessage(error, 'Changement refusé. Vérifiez votre ancien mot de passe et les champs saisis.') });
         } finally {
             setLoading(false);
         }

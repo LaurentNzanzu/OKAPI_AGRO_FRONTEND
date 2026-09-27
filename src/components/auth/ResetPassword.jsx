@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { authErrorMessage, AUTH_UNAVAILABLE } from '../../utils/authError';
 import authService from '../../services/auth';
 import {
   AuthPage,
@@ -15,7 +16,21 @@ import {
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const token = searchParams.get('token');
+  const [token] = useState(() => searchParams.get('token'));
+  const submitting = useRef(false);
+  const redirectTimer = useRef(null);
+  const [verificationAttempt, setVerificationAttempt] = useState(0);
+  const [verificationError, setVerificationError] = useState('');
+
+  useEffect(() => {
+    if (searchParams.has('token')) {
+      const clean = new URLSearchParams(searchParams);
+      clean.delete('token');
+      navigate({ search: clean.toString() }, { replace: true });
+    }
+  }, [navigate, searchParams]);
+
+  useEffect(() => () => clearTimeout(redirectTimer.current), []);
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -26,20 +41,23 @@ const ResetPassword = () => {
   const [shake, setShake] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    setValidToken(null);
+    setVerificationError('');
     const verify = async () => {
-      if (!token) {
-        setValidToken(false);
-        return;
-      }
+      if (!token) { setValidToken(false); return; }
       try {
         const res = await authService.verifyResetToken(token);
-        setValidToken(res.valid);
-      } catch {
-        setValidToken(false);
+        if (!cancelled) setValidToken(res.valid === true);
+      } catch (error) {
+        if (cancelled) return;
+        if ([400, 401, 422].includes(error.response?.status)) setValidToken(false);
+        else setVerificationError(AUTH_UNAVAILABLE);
       }
     };
     verify();
-  }, [token]);
+    return () => { cancelled = true; };
+  }, [token, verificationAttempt]);
 
   const triggerShake = () => {
     setShake(true);
@@ -48,6 +66,7 @@ const ResetPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting.current || validToken !== true || success) return;
 
     if (password !== confirmPassword) {
       setError('Les mots de passe ne correspondent pas');
@@ -75,19 +94,30 @@ const ResetPassword = () => {
       return;
     }
 
+    submitting.current = true;
     setLoading(true);
     setError('');
     try {
       await authService.resetPassword(token, password);
       setSuccess(true);
-      setTimeout(() => navigate('/login', { state: { message: 'Mot de passe mis à jour' } }), 3000);
+      redirectTimer.current = setTimeout(() => navigate('/login', { replace: true, state: { message: 'Mot de passe mis à jour' } }), 3000);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Erreur lors de la réinitialisation');
+      if ([400, 401].includes(err.response?.status)) setValidToken(false);
+      setError(authErrorMessage(err, 'Impossible de réinitialiser le mot de passe. Vérifiez les champs.'));
       triggerShake();
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   };
+
+  if (verificationError) {
+    return <AuthPage variant="centered"><div className="af-auth__success-body">
+      <AuthAlert>{verificationError}</AuthAlert>
+      <button type="button" className="af-auth__submit" onClick={() => setVerificationAttempt((n) => n + 1)}>Réessayer</button>
+      <AuthBackLink />
+    </div><AuthFooter /></AuthPage>;
+  }
 
   if (validToken === null) {
     return <AuthLoadingPage />;

@@ -2,6 +2,22 @@
 import api from './api';
 
 const organisationsService = {
+  async getProfil() {
+    return (await api.get('/organisations/me/profil')).data;
+  },
+  async updateProfil(payload) {
+    return (await api.patch('/organisations/me/profil', payload)).data;
+  },
+  async uploadLogo(file) {
+    const body = new FormData();
+    body.append('file', file);
+    return (await api.post('/organisations/me/logo', body, {
+      headers: { 'Content-Type': 'multipart/form-data' }, timeout: 45000,
+    })).data;
+  },
+  async deleteLogo() {
+    return (await api.delete('/organisations/me/logo')).data;
+  },
   async list(params = {}) {
     const { data } = await api.get('/organisations/', { params });
     return data;

@@ -14,13 +14,6 @@ export function getPostLoginPath(user, requestedPath) {
     return safePath;
   }
 
-  if (import.meta.env.DEV) {
-    console.warn(
-      `[auth] Redirection post-login: "${requestedPath}" inaccessible → "${fallback}"`,
-      { roles: user?.roles }
-    );
-  }
-
   return fallback;
 }
 

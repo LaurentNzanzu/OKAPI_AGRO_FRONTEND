@@ -37,6 +37,8 @@ const getLocalisationName = (loc) => {
 
 const PrintInventaireBiens = ({ biens = [], onClose }) => {
   const { t } = useTranslation();
+  const owners = new Set(biens.map(b => b.organisation?.id ?? null));
+  const organisation = owners.size === 1 ? biens[0]?.organisation : null;
 
   const getTypeLabel = (type) => {
     const key = `status.type.${type}`;
@@ -97,7 +99,7 @@ const PrintInventaireBiens = ({ biens = [], onClose }) => {
           )}
         </div>
 
-        <PrintHeader
+        <PrintHeader organisation={organisation}
           title={t('prints.inventaire.title')}
           subtitle={t('prints.inventaire.subtitle')}
         />
@@ -178,7 +180,7 @@ const PrintInventaireBiens = ({ biens = [], onClose }) => {
           />
         </PrintSection>
 
-        <PrintFooter />
+        <PrintFooter organisation={organisation} />
       </div>
     </>
   );

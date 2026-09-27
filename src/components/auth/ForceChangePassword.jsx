@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import authService from '../../services/auth';
+import { getPostLoginPath } from '../../utils/postLoginRedirect';
 import Button from '../ui/Button';
 
 const RULES = [
@@ -14,12 +15,13 @@ const RULES = [
 
 const ForceChangePassword = () => {
   const navigate = useNavigate();
-  const { user, updateUser } = useAuth();
+  const { updateUser } = useAuth();
 
   const [nouveau, setNouveau] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [passwordSaved, setPasswordSaved] = useState(false);
 
   const rulesStatus = RULES.map((r) => ({ ...r, ok: r.test(nouveau) }));
   const allRulesOk = rulesStatus.every((r) => r.ok);
@@ -27,29 +29,35 @@ const ForceChangePassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
 
-    if (!allRulesOk) {
+    if (!passwordSaved && !allRulesOk) {
       setError('Le mot de passe ne respecte pas toutes les règles.');
       return;
     }
-    if (!match) {
+    if (!passwordSaved && !match) {
       setError('Les deux mots de passe ne correspondent pas.');
       return;
     }
 
     setLoading(true);
     try {
-      const result = await authService.forceChangePassword(nouveau);
-
-      if (result.success) {
-        // Mettre à jour le user local
-        updateUser({ ...user, doit_changer_mot_de_passe: false });
-        navigate('/dashboard', { replace: true });
-      } else {
-        setError(result.error);
+      if (!passwordSaved) {
+        const result = await authService.forceChangePassword(nouveau);
+        if (!result.success) { setError(result.error); return; }
+        setPasswordSaved(true);
+        setNouveau('');
+        setConfirm('');
       }
-    } catch (err) {
+      const profile = await authService.getCurrentUser();
+      if (profile.success && profile.data.doit_changer_mot_de_passe === false) {
+        updateUser(profile.data);
+        navigate(getPostLoginPath(profile.data), { replace: true });
+      } else {
+        setError('Mot de passe enregistré. La vérification du profil a échoué. Veuillez réessayer.');
+      }
+    } catch {
       setError('Erreur inattendue. Veuillez réessayer.');
     } finally {
       setLoading(false);
@@ -76,6 +84,7 @@ const ForceChangePassword = () => {
               Nouveau mot de passe
             </label>
             <input
+              disabled={loading || passwordSaved}
               type="password"
               value={nouveau}
               onChange={(e) => setNouveau(e.target.value)}
@@ -105,6 +114,7 @@ const ForceChangePassword = () => {
               Confirmer le mot de passe
             </label>
             <input
+              disabled={loading || passwordSaved}
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
@@ -127,9 +137,9 @@ const ForceChangePassword = () => {
             type="submit"
             variant="primary"
             className="w-full"
-            disabled={loading || !allRulesOk || !match}
+            disabled={loading || (!passwordSaved && (!allRulesOk || !match))}
           >
-            {loading ? 'Enregistrement...' : 'Valider et continuer'}
+            {loading ? 'Enregistrement...' : passwordSaved ? 'Réessayer la vérification' : 'Valider et continuer'}
           </Button>
         </form>
       </div>

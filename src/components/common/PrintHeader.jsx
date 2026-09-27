@@ -1,9 +1,9 @@
 // frontend/src/components/common/PrintHeader.jsx
 import React from 'react';
 import { useTranslation } from '../../context/LanguageContext';
-import logoOkapi from '../../assets/react.svg';
+import OrganisationIdentity from '../organisations/OrganisationIdentity';
 
-const PrintHeader = ({ title, subtitle, documentRef, date, logoSrc = logoOkapi }) => {
+const PrintHeader = ({ title, subtitle, documentRef, date, organisation }) => {
   const { t } = useTranslation();
   const currentDate = date || new Date().toLocaleDateString('fr-FR', {
     day: '2-digit',
@@ -16,22 +16,7 @@ const PrintHeader = ({ title, subtitle, documentRef, date, logoSrc = logoOkapi }
       <div className="border-t-4 border-green-700 mb-3"></div>
       
       <div className="flex justify-between items-start flex-wrap gap-4">
-        <div className="flex gap-3 items-center">
-          <div className="w-16 h-12 flex-shrink-0 flex items-center justify-center overflow-hidden rounded-xl">
-            <img src={logoSrc} alt="Logo OKAPI Agro" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-green-700 tracking-wide m-0">{t('prints.header.company')}</h1>
-            <p className="text-xs text-gray-500 dark:text-slate-400 my-0.5">{t('prints.header.legalForm')}</p>
-            <div className="text-[9px] text-gray-400 dark:text-slate-500 mt-1">
-              <span>RCCM: CD/KNG/RCCM/21-B-03234</span>
-              <span className="mx-1">|</span>
-              <span>Id. Nat.: 01-A0101-N93880K</span>
-              <span className="mx-1">|</span>
-              <span>Impôt: A2283297Q</span>
-            </div>
-          </div>
-        </div>
+        <OrganisationIdentity organisation={organisation} />
 
         <div className="text-right border-l-2 border-green-700 pl-4">
           <div className="flex items-center gap-1.5">
