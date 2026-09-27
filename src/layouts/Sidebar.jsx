@@ -40,7 +40,7 @@ const childInactive = 'block px-4 py-2 text-sm rounded-lg nav-child';
 
 const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
   // ═══ AJOUT 5.23 — hasModule ═══
-  const { user, hasPermission, hasModule } = useAuth();
+  const { user, organisationId, hasPermission, hasModule } = useAuth();
   // ═══ FIN AJOUT ═══
   const { t } = useLanguage();
   const location = useLocation();
@@ -98,6 +98,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
 
     // 🆕 AJOUT 5.23-bis — Filtre platformOnly (admin plateforme)
     if (item.platformOnly && !isPlatformAdmin(user)) return false;
+    if (item.organisationOnly && !organisationId) return false;
 
     if (item.path) return canAccessPath(item.path);
     if (item.children) {
@@ -125,6 +126,13 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
       // 🆕 PAS DE MODULE — toujours visible
       roles: ['ADMIN', 'DG', 'COMPTABLE', 'TECHNICIEN', 'CAISSE', 'MAGASINIER'],
       permission: 'dashboard.view',
+    },
+    {
+      labelKey: 'navMyOrganisation',
+      path: '/parametres/organisation',
+      icon: BuildingOfficeOutline,
+      roles: ['ADMIN'],
+      organisationOnly: true,
     },
     {
       labelKey: 'navScan',

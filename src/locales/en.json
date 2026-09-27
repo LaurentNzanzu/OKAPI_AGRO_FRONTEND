@@ -1544,6 +1544,7 @@
     "success": "Configuration saved successfully"
   },
     "navOrganisations": "Organizations",
+    "navMyOrganisation": "My organization",
   "navSaaS": "SaaS",
   "navAbonnements": "Subscriptions",
   "navFacturation": "Billing",

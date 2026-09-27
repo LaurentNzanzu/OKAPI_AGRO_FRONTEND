@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import {
     SunIcon,
     MoonIcon,
@@ -16,6 +17,7 @@ import {
 
 const Parametres = () => {
     const navigate = useNavigate();
+    const { organisationId, hasRole } = useAuth();
     const { lang, setLanguage, t } = useLanguage();
     const { theme, setTheme } = useTheme();
     const [settings, setSettings] = useState({
@@ -80,6 +82,11 @@ const Parametres = () => {
             )}
 
             <div className="space-y-4">
+                {organisationId && hasRole('ADMIN') && <button onClick={() => navigate('/parametres/organisation')}
+                    className="w-full text-left bg-white dark:bg-slate-900 rounded-xl border p-5">
+                    <span className="block font-semibold">Mon organisation</span>
+                    <span className="text-sm text-gray-500">Identité, logo et coordonnées des documents</span>
+                </button>}
                 {/* Thème */}
                 <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800/80 p-4 sm:p-6">
                     <div className="flex items-center gap-3 mb-4">

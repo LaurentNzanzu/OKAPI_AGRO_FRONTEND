@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useOrganisation } from '../context/OrganisationContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { notificationsService, formatNotificationContent } from '../services/notifications';
@@ -21,6 +22,7 @@ import { safeNavigate } from '../utils/safeNavigate';
 import usePolling from '../hooks/usePolling';
 
 const Header = ({ onMenuToggle, sidebarCollapsed, onSidebarCollapse, isLarge }) => {
+  const { profil: organisation } = useOrganisation();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { lang, setLanguage, t } = useLanguage();
@@ -189,13 +191,15 @@ const Header = ({ onMenuToggle, sidebarCollapsed, onSidebarCollapse, isLarge }) 
             className="flex items-center gap-3 cursor-pointer min-w-0"
             onClick={() => navigate('/dashboard')}
           >
-            <BuildingOffice2Icon className="w-7 h-7 text-primary-600 dark:text-slate-100 shrink-0" />
+            {organisation?.logo_url ? <img key={organisation.logo_url} src={organisation.logo_url} alt={`Logo ${organisation.nom}`}
+              className="w-8 h-8 object-contain shrink-0" onError={e => { e.currentTarget.style.display = 'none'; }} />
+              : <BuildingOffice2Icon className="w-7 h-7 text-primary-600 dark:text-slate-100 shrink-0" />}
             <div className="min-w-0">
               <h1 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-slate-100 truncate">
                 {t('appTitle')}
               </h1>
-              <p className="hidden sm:block text-xs text-gray-500 dark:text-slate-400 -mt-0.5 truncate">
-                {t('appSubtitle')}
+              <p title={organisation?.nom} className="block max-w-[140px] sm:max-w-[260px] text-xs text-gray-500 dark:text-slate-400 -mt-0.5 truncate">
+                {organisation?.nom || t('appSubtitle')}
               </p>
             </div>
           </div>

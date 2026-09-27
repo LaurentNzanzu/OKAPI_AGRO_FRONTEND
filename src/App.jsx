@@ -3,6 +3,8 @@ import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext';
+import { OrganisationProvider } from './context/OrganisationContext';
+const MonOrganisation = React.lazy(() => import('./components/organisations/MonOrganisation'));
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ValidationProvider } from './context/ValidationContext';  // NOUVEAU
@@ -122,6 +124,7 @@ function App() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
+        <OrganisationProvider>
         <ThemeProvider>
           {/* NOUVEAU - Providers pour la TÂCHE 2 */}
           <ValidationProvider>
@@ -244,6 +247,7 @@ function App() {
                   <Route path="prints/fiche-amortissement/:id" element={<Lazy><PrintFicheAmortissement /></Lazy>} />
                   <Route path="prints/etat-besoin/:id" element={<Lazy><PrintEtatBesoin /></Lazy>} />
                   <Route path="parametres" element={<Lazy><Parametres /></Lazy>} />
+                  <Route path="parametres/organisation" element={<Lazy><MonOrganisation /></Lazy>} />
                   <Route path="profil" element={<Lazy><Profil /></Lazy>} />
                   <Route path="concertations" element={<Lazy><ConcertationsTab /></Lazy>} />
                   {/* === SPRINT 0 — SaaS / Multi-tenant === */}
@@ -270,6 +274,7 @@ function App() {
           </ValidationProvider>
           {/* FIN NOUVEAU */}
         </ThemeProvider>
+        </OrganisationProvider>
       </AuthProvider>
     </Router>
   );

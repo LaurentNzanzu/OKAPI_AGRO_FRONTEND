@@ -21,11 +21,12 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [shake, setShake] = useState(false);
+  const [blockedUntil, setBlockedUntil] = useState(0);
+  const [now, setNow] = useState(Date.now());
 
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-
   const requestedPath = location.state?.from?.pathname || '/dashboard';
 
   const triggerShake = () => {
@@ -33,30 +34,71 @@ const Login = () => {
     setTimeout(() => setShake(false), 400);
   };
 
+  useEffect(() => {
+    if (!blockedUntil) return undefined;
+
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [blockedUntil]);
+
+  const secondsLeft = Math.max(
+    0,
+    Math.ceil((blockedUntil - now) / 1000)
+  );
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading || secondsLeft > 0) return;
+
     setError('');
     setLoading(true);
 
-    const result = await login(email.trim(), mot_de_passe);
+    try {
+      const result = await login(email.trim(), mot_de_passe);
 
-    if (result.success) {
-      if (rememberMe) {
-        sessionStorage.setItem('rememberMe', 'true');
-        sessionStorage.setItem('rememberedEmail', email);
+      if (result.success) {
+        setBlockedUntil(0);
+        if (rememberMe) {
+          sessionStorage.setItem('rememberMe', 'true');
+          sessionStorage.setItem('rememberedEmail', email);
+        } else {
+          sessionStorage.removeItem('rememberMe');
+          sessionStorage.removeItem('rememberedEmail');
+        }
+
+        const target = result.data.user.doit_changer_mot_de_passe
+          ? '/force-change-password'
+          : getPostLoginPath(result.data.user, requestedPath);
+        navigate(target, { replace: true });
       } else {
-        sessionStorage.removeItem('rememberMe');
-        sessionStorage.removeItem('rememberedEmail');
+        if (result.status === 429 || result.remainingAttempts === 0) {
+          const retryAfter = Number(result.retryAfter);
+          const delay = Number.isFinite(retryAfter) && retryAfter > 0
+            ? retryAfter
+            : 300;
+          const currentTime = Date.now();
+          setBlockedUntil(currentTime + delay * 1000);
+          setNow(currentTime);
+          setError('Trop de tentatives incorrectes. Patientez avant de réessayer.');
+        } else if (typeof result.remainingAttempts === 'number') {
+          setError(
+            `${result.error || 'Email ou mot de passe incorrect'} ` +
+            `Tentatives restantes : ${result.remainingAttempts}.`
+          );
+        } else {
+          setError(result.error || 'Email ou mot de passe incorrect');
+        }
+        triggerShake();
       }
-
-      const target = getPostLoginPath(result.user, requestedPath);
-      navigate(target, { replace: true });
-    } else {
-      setError(result.error || 'Email ou mot de passe incorrect');
+    } catch {
+      setError('Connexion impossible pour le moment. Veuillez réessayer.');
       triggerShake();
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -77,7 +119,16 @@ const Login = () => {
         </header>
 
         <form onSubmit={handleSubmit} className="af-auth__form" noValidate>
-          {error && <AuthAlert>{error}</AuthAlert>}
+          {error && (
+            <AuthAlert>
+              {error}
+              {secondsLeft > 0 && (
+                ` Réessayez dans ${Math.floor(secondsLeft / 60)}:${String(
+                  secondsLeft % 60
+                ).padStart(2, '0')}.`
+              )}
+            </AuthAlert>
+          )}
 
           <div className="af-auth__field">
             <label className="af-auth__label" htmlFor="email">
@@ -94,7 +145,7 @@ const Login = () => {
                 required
                 autoComplete="email"
                 autoFocus
-                disabled={loading}
+                disabled={loading || secondsLeft > 0}
                 className="af-auth__input"
               />
             </div>
@@ -119,7 +170,7 @@ const Login = () => {
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"
-                disabled={loading}
+                disabled={loading || secondsLeft > 0}
                 className="af-auth__input"
               />
             </div>
@@ -128,12 +179,17 @@ const Login = () => {
           <RememberToggle
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            disabled={loading}
+            disabled={loading || secondsLeft > 0}
           />
 
           <hr className="af-auth__form-divider" aria-hidden />
 
-          <AuthSubmitButton loading={loading}>Se connecter</AuthSubmitButton>
+          <fieldset
+            disabled={loading || secondsLeft > 0}
+            style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+          >
+            <AuthSubmitButton loading={loading}>Se connecter</AuthSubmitButton>
+          </fieldset>
           <AuthBackLink to="/">← Retour à l&apos;accueil</AuthBackLink>
         </form>
       </div>

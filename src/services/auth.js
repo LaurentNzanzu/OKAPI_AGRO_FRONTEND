@@ -1,5 +1,9 @@
 // frontend/src/services/auth.js
 import api from './api';
+import { authErrorMessage } from '../utils/authError';
+
+let refreshPromise = null;
+let sessionGeneration = 0;
 
 // === TOKEN STORAGE ===
 const STORAGE_KEYS = {
@@ -91,7 +95,7 @@ const authService = {
     try {
       const data = sessionStorage.getItem(STORAGE_KEYS.USER_DATA);
       return data ? JSON.parse(data) : null;
-    } catch (error) {
+    } catch {
       return null;
     }
   },
@@ -99,7 +103,7 @@ const authService = {
   getAccessToken() {
     try {
       return sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    } catch (error) {
+    } catch {
       return null;
     }
   },
@@ -107,7 +111,7 @@ const authService = {
   getSessionUuid() {
     try {
       return sessionStorage.getItem(STORAGE_KEYS.SESSION_UUID);
-    } catch (error) {
+    } catch {
       return null;
     }
   },
@@ -116,7 +120,7 @@ const authService = {
     try {
       const expiresAt = sessionStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRES_AT);
       return expiresAt ? parseInt(expiresAt, 10) : null;
-    } catch (error) {
+    } catch {
       return null;
     }
   },
@@ -131,6 +135,7 @@ const authService = {
   },
 
   clearTokens() {
+    ++sessionGeneration;
     try {
       sessionStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
       sessionStorage.removeItem(STORAGE_KEYS.SESSION_UUID);
@@ -138,6 +143,8 @@ const authService = {
       sessionStorage.removeItem(STORAGE_KEYS.USER_DATA);
     } catch (error) {
       console.error('Erreur lors du nettoyage des tokens:', error);
+    } finally {
+      window.dispatchEvent(new Event('auth-cleared'));
     }
   },
 
@@ -173,7 +180,17 @@ const authService = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.detail || 'Erreur de connexion',
+        status: error.response?.status,
+        error: authErrorMessage(error),
+
+        retryAfter: Number(
+          error.response?.data?.detail?.retry_after ||
+          error.response?.headers?.['retry-after'] ||
+          0
+        ),
+
+        remainingAttempts:
+          error.response?.data?.detail?.remaining_attempts,
       };
     }
   },
@@ -181,9 +198,9 @@ const authService = {
   logout: async () => {
     try {
       await api.post('/auth/logout');
-    } catch (error) {
+    } catch {
       if (import.meta.env.DEV) {
-        console.error('Erreur logout:', error);
+        console.warn('La déconnexion distante a échoué.');
       }
     } finally {
       // Toujours nettoyer même si la requête échoue
@@ -193,38 +210,34 @@ const authService = {
 
   // === REFRESH ===
 
-  refreshToken: async () => {
-    try {
-      const response = await api.post('/auth/refresh');
-
-      if (response.data) {
-        const { access_token, session_uuid, expires_in } = response.data;
-        authService.setTokens(access_token, session_uuid, expires_in);
-
-        return {
-          success: true,
-          data: response.data,
-        };
-      }
-
-      return {
-        success: false,
-        error: 'Réponse invalide du serveur',
-      };
-    } catch (error) {
-      authService.clearTokens();
-      return {
-        success: false,
-        error: error.response?.data?.detail || 'Erreur de rafraîchissement',
-      };
+  refreshToken: () => {
+    if (!refreshPromise) {
+      const generation = sessionGeneration;
+      refreshPromise = (async () => {
+        try {
+          const response = await api.post('/auth/refresh');
+          if (generation !== sessionGeneration) return { success: false, status: 401 };
+          const { access_token, session_uuid, expires_in } = response.data || {};
+          if (!access_token || !session_uuid) return { success: false, status: 502, error: authErrorMessage({ status: 502 }) };
+          authService.setTokens(access_token, session_uuid, expires_in);
+          return { success: true, data: response.data };
+        } catch (error) {
+          const status = error.response?.status;
+          if (status === 401) authService.clearTokens();
+          return { success: false, status, error: authErrorMessage(error) };
+        }
+      })().finally(() => { refreshPromise = null; });
     }
+    return refreshPromise;
   },
 
   // === UTILISATEUR ===
 
   getCurrentUser: async () => {
+    const generation = sessionGeneration;
     try {
       const response = await api.get('/auth/me');
+      if (generation !== sessionGeneration) return { success: false, status: 401 };
       const normalizedUser = {
         ...response.data,
         roles: normalizeRoles(response.data),
@@ -244,7 +257,8 @@ const authService = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.detail || 'Erreur de récupération',
+        status: error.response?.status,
+        error: authErrorMessage(error),
       };
     }
   },
@@ -271,6 +285,7 @@ const authService = {
       if (!refreshResult.success) {
         return {
           success: false,
+          status: refreshResult.status,
           error: refreshResult.error || 'Impossible de restaurer la session'
         };
       }
@@ -289,12 +304,14 @@ const authService = {
 
       return {
         success: false,
+        status: userResult.status,
         error: userResult.error || 'Impossible de récupérer le profil utilisateur'
       };
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.detail || 'Erreur de restauration',
+        status: error.response?.status,
+        error: authErrorMessage(error),
       };
     }
   },
@@ -307,20 +324,12 @@ const authService = {
         nouveau_mot_de_passe: nouveauMotDePasse,
       });
 
-      // Mettre à jour l'utilisateur local (flag passe à false)
-      const currentUser = authService.getUser();
-      if (currentUser) {
-        authService.setUser({
-          ...currentUser,
-          doit_changer_mot_de_passe: false,
-        });
-      }
-
       return { success: true, data: response.data };
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.detail || 'Erreur lors du changement de mot de passe',
+        status: error.response?.status,
+        error: authErrorMessage(error),
       };
     }
   },
@@ -333,12 +342,13 @@ const authService = {
   },
 
   verifyResetToken: async (token) => {
-    const response = await api.get(`/auth/verify-token/${token}`);
+    const response = await api.post('/auth/verify-token', { token });
     return response.data;
   },
 
   resetPassword: async (token, nouveau_mot_de_passe) => {
     const response = await api.post('/auth/reset-password', { token, nouveau_mot_de_passe });
+    authService.clearTokens();
     return response.data;
   },
 };

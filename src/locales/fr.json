@@ -1545,6 +1545,7 @@
     "success": "Configuration enregistrée avec succès"
   },
   "navOrganisations": "Organisations",
+  "navMyOrganisation": "Mon organisation",
   "navSaaS": "SaaS",
   "navAbonnements": "Abonnements",
   "navFacturation": "Facturation",

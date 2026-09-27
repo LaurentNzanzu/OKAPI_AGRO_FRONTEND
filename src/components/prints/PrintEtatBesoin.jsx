@@ -49,7 +49,7 @@ const PrintEtatBesoin = () => {
         </button>
       </div>
 
-      <PrintHeader
+      <PrintHeader organisation={data.organisation}
         title={t('prints.etatBesoin.title')}
         subtitle={bien ? `${bien.designation} • ${t('prints.etatBesoin.breakdown')} #${panne?.id_panne}` : `${t('prints.etatBesoin.breakdown')} #${panne?.id_panne || '-'}`}
         documentRef={besoin.numero_demande}
@@ -198,7 +198,7 @@ const PrintEtatBesoin = () => {
         </div>
       </section>
 
-      <PrintFooter />
+      <PrintFooter organisation={data.organisation} />
     </div>
   );
 };

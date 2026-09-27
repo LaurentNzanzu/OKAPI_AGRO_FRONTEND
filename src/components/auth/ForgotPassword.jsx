@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { authErrorMessage } from '../../utils/authError';
 import authService from '../../services/auth';
 import {
   AuthPage,
@@ -29,65 +30,21 @@ const ForgotPassword = () => {
   const [error, setError] = useState('');
   const [shake, setShake] = useState(false);
   
-  // États pour le mode développement
-  const [devLink, setDevLink] = useState(null);
-  const [resetToken, setResetToken] = useState(null);
-  const [countdown, setCountdown] = useState(5);
-  
-  const navigate = useNavigate();
-
-  // Gestion du décompte pour l'affichage du lien de test
-  useEffect(() => {
-    let timer;
-    if (success && countdown > 0) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    } else if (success && countdown === 0 && !devLink && !resetToken) {
-      // Si le décompte est fini mais qu'aucun lien n'est disponible, afficher un message
-      setDevLink(null);
-    }
-    return () => clearTimeout(timer);
-  }, [success, countdown, devLink, resetToken]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError('');
     
     try {
-      const response = await authService.forgotPassword(email);
+      await authService.forgotPassword(email.trim());
       setSuccess(true);
-      
-      console.log("Réponse API forgotPassword :", response);
-
-      // Récupération du token et du lien de développement
-      const token = response?.data?.reset_token || response?.reset_token;
-      const link = response?.data?.dev_reset_link || response?.dev_reset_link;
-
-      if (token) {
-        setResetToken(token);
-      }
-
-      if (link) {
-        // On conserve le lien pour l'affichage après le décompte
-        setTimeout(() => {
-          setDevLink(link);
-        }, 5000); // 5 secondes
-      }
-      
     } catch (err) {
-      setError(err.response?.data?.detail || 'Erreur lors de la demande');
+      setError(authErrorMessage(err, 'Impossible de traiter la demande. Veuillez réessayer.'));
       setShake(true);
       setTimeout(() => setShake(false), 400);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleResetPassword = () => {
-    if (resetToken) {
-      navigate(`/reset-password?token=${resetToken}`);
-    } else if (devLink) {
-      window.location.href = devLink;
     }
   };
 
@@ -100,35 +57,8 @@ const ForgotPassword = () => {
           </div>
           <h2 className="af-auth__title">Vérifiez votre boîte mail</h2>
           <p className="af-auth__subtitle" style={{ marginBottom: 24 }}>
-            Si un compte est associé à cette adresse, vous recevrez un lien sécurisé sous 2 minutes.
-            Pensez à vérifier vos spams.
+            Si cette adresse email est associée à un compte, vous recevrez un lien de réinitialisation. Vérifiez également vos courriers indésirables.
           </p>
-
-          {/* Bloc d'affichage du lien de test en mode développement */}
-          {countdown > 0 ? (
-            <p className="text-xs text-slate-400 mb-6 italic">
-              Affichage du lien direct de test dans {countdown} secondes...
-            </p>
-          ) : (
-            <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-center animate-fade-in">
-              <p className="text-xs text-emerald-800 font-semibold mb-2 uppercase tracking-wider">
-                Mode Développement — Accès rapide
-              </p>
-              {(devLink || resetToken) ? (
-                <button
-                  onClick={handleResetPassword}
-                  className="inline-block w-full py-2.5 px-4 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 shadow-sm transition-colors text-center"
-                  style={{ textDecoration: 'none', border: 'none', cursor: 'pointer' }}
-                >
-                  {resetToken ? '🔑' : '📧'} Réinitialiser mon mot de passe maintenant
-                </button>
-              ) : (
-                <p className="text-sm text-emerald-700 font-medium">
-                  Aucun lien de réinitialisation disponible pour cet email
-                </p>
-              )}
-            </div>
-          )}
 
           <Link to="/login" className="af-auth__submit af-auth__submit--outline" style={{ textDecoration: 'none', display: 'inline-flex' }}>
             Retour à la connexion
@@ -149,11 +79,11 @@ const ForgotPassword = () => {
           <h2 className="af-auth__title">Mot de passe oublié ?</h2>
           <p className="af-auth__subtitle">
             Saisissez votre adresse professionnelle. Si un compte existe, vous recevrez un lien
-            sécurisé sous 2 minutes.
+            sécurisé par email.
           </p>
         </header>
 
-        <form onSubmit={handleSubmit} className="af-auth__form" noValidate>
+        <form onSubmit={handleSubmit} className="af-auth__form">
           {error && <AuthAlert>{error}</AuthAlert>}
 
           <div className="af-auth__field">

@@ -14,13 +14,14 @@ vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({
     user: state.user, updateUser: state.updateUser,
 }) }));
 vi.mock('../../services/auth', () => ({ default: {
-    getAccessToken: () => 'test-token', isTokenExpired: () => false, forceChangePassword: vi.fn(),
+    getAccessToken: () => 'test-token', isTokenExpired: () => false, forceChangePassword: vi.fn(), getCurrentUser: vi.fn(),
 } }));
 
 beforeEach(() => {
     state.user = { id: 25, roles: ['COMPTABLE'], doit_changer_mot_de_passe: true };
     vi.clearAllMocks();
     authService.forceChangePassword.mockResolvedValue({ success: true });
+    authService.getCurrentUser.mockResolvedValue({ success: true, data: { ...state.user, doit_changer_mot_de_passe: false } });
 });
 afterEach(cleanup);
 

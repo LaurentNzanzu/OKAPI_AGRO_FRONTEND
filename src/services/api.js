@@ -2,6 +2,9 @@ import axios from 'axios';
 import authService from './auth';
 import { isPublicRoute } from '../config/permissions';
 
+const cookieOnlyPaths = new Set(['/auth/refresh', '/auth/login', '/auth/forgot-password', '/auth/verify-token', '/auth/reset-password']);
+const endpointPath = (config) => (config?.url || '').split('?')[0].replace(/\/$/, '');
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 const api = axios.create({
@@ -24,13 +27,18 @@ api.interceptors.request.use(
   (config) => {
     // 1. Ajouter le token d'accès dans le header Authorization
     const accessToken = authService.getAccessToken();
-    if (accessToken) {
+    if (accessToken && !cookieOnlyPaths.has(endpointPath(config))) {
       config.headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    if (cookieOnlyPaths.has(endpointPath(config))) {
+      delete config.headers.Authorization;
+      delete config.headers['X-Session-ID'];
     }
 
     // 2. Ajouter le session_uuid dans le header X-Session-ID
     const sessionUuid = authService.getSessionUuid();
-    if (sessionUuid) {
+    if (sessionUuid && !cookieOnlyPaths.has(endpointPath(config))) {
       config.headers['X-Session-ID'] = sessionUuid;
     }
 
@@ -56,7 +64,12 @@ api.interceptors.request.use(
 
 // === RESPONSE INTERCEPTOR ===
 
-let refreshPromise = null;
+const expireSession = () => {
+  authService.clearTokens();
+  if (!isPublicRoute(window.location.pathname) || window.location.pathname === '/force-change-password') {
+    window.location.assign('/login');
+  }
+};
 
 api.interceptors.response.use(
   (response) => response,
@@ -76,7 +89,7 @@ api.interceptors.response.use(
     // Backend renvoie : "Le module 'XXX' n'est pas activé pour votre organisation..."
     // On dispatche un event global écouté par <ModuleNotActiveBanner />
     if (error.response.status === 403) {
-      const detail = error.response.data?.detail || '';
+      const detail = typeof error.response.data?.detail === 'string' ? error.response.data.detail : '';
 
       const moduleMatch = detail.match(/Le module '([A-Z_]+)' n'est pas activé/i);
 
@@ -100,50 +113,25 @@ api.interceptors.response.use(
     }
     // ═══ FIN AJOUT 5.23-bis ═══
 
-    // 2. Vérifier si la requête concernait déjà l'authentification (/login, /refresh)
-    const isAuthEndpoint = originalRequest?.url?.includes('/auth/login') || originalRequest?.url?.includes('/auth/refresh');
+    if (error.response.status === 503) {
+      window.dispatchEvent(new Event('auth-unavailable'));
+      return Promise.reject(error);
+    }
 
-    // 3. Si l'erreur est 401 et qu'il ne s'agit pas d'un endpoint d'auth et que la requête n'a pas encore été retentée
-    if (error.response.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
-      // Sur les pages publiques, ne pas tenter de refresh
-      if (isPublicRoute(window.location.pathname)) {
+    const path = endpointPath(originalRequest);
+    const noRefresh = cookieOnlyPaths.has(path) || path === '/auth/logout';
+    if (error.response.status === 401 && originalRequest && !noRefresh) {
+      if (originalRequest._retry) {
+        expireSession();
         return Promise.reject(error);
       }
-
       originalRequest._retry = true;
-
-      try {
-        if (!refreshPromise) {
-          refreshPromise = authService.refreshToken()
-            .then((result) => {
-              if (!result.success) {
-                throw new Error(result.error || 'Échec du rafraîchissement');
-              }
-              return result;
-            })
-            .finally(() => {
-              refreshPromise = null;
-            });
-        }
-
-        await refreshPromise;
-
-        // Réessayer la requête originale avec le nouveau token
-        const newAccessToken = authService.getAccessToken();
-        if (newAccessToken) {
-          originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-        }
-
-        return api(originalRequest);
-      } catch (refreshError) {
-        // Refresh échoué définitivement → nettoyage et redirection
-        refreshPromise = null;
-        authService.clearTokens();
-        if (!isPublicRoute(window.location.pathname)) {
-          window.location.href = '/login';
-        }
-        return Promise.reject(refreshError);
-      }
+      // The service shares this promise with startup and explicit refresh calls.
+      const result = await authService.refreshToken();
+      if (result.success) return api(originalRequest);
+      if (result.status === 401) expireSession();
+      // Keep the temporary failure status instead of converting it into a 401.
+      return Promise.reject({ response: { status: result.status }, message: result.error });
     }
 
     return Promise.reject(error);
