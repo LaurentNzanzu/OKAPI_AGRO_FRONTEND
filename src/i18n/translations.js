@@ -241,7 +241,7 @@ const translations = {
     // ============================================================
     // PARAMÈTRES (SETTINGS)
     // ============================================================
-    settings: {
+    settingsDetails: {
       title: 'Paramètres',
       appearance: 'Apparence',
       light: 'Clair',
@@ -978,7 +978,7 @@ const translations = {
     },
 
     // Settings
-    settings: {
+    settingsDetails: {
       title: 'Settings',
       appearance: 'Appearance',
       light: 'Light',

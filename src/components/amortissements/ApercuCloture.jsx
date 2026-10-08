@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from '../../context/LanguageContext';
 import { formatPrice } from '../../utils/formatters';
-import { AppIcon, XMarkIcon, CheckCircleIcon } from '../ui/icons';
+import { AppIcon, XMarkIcon, CheckCircleIcon, ExclamationTriangleIcon } from '../ui/icons';
 
 const ApercuCloture = ({ biens, onToggleAll, onToggleBien, selectedIds, onClose }) => {
     const { t } = useTranslation();

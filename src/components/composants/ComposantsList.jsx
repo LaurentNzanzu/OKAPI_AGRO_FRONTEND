@@ -15,7 +15,6 @@ import { formatDate } from '../../utils/formatters';
 import ConfirmDialog from '../common/ConfirmDialog';
 
 const toDateInputValue = (value) => {
-  const { t } = useTranslation();
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';

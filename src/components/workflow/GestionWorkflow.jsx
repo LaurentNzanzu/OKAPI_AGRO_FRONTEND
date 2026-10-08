@@ -39,13 +39,13 @@ const GestionWorkflow = () => {
   });
   const [saving, setSaving] = useState(false);
 
-  const canGerer = hasPermission('workflow.gerer');
+  const canGerer = hasPermission('WORKFLOW_GERER') || hasPermission('workflow.gerer');
 
   const fetchEtapes = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api.get(`/workflow/${typeWorkflow}/`);
+      const { data } = await api.get(`/workflow/${typeWorkflow}`);
       setEtapes(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.response?.data?.message || t('workflow.loadError'));
@@ -108,9 +108,9 @@ const GestionWorkflow = () => {
       };
 
       if (editingEtape) {
-        await api.put(`/workflow/etapes/${editingEtape.id}/`, payload);
+        await api.put(`/workflow/etapes/${editingEtape.id}`, payload);
       } else {
-        await api.post(`/workflow/${typeWorkflow}/etapes/`, {
+        await api.post(`/workflow/${typeWorkflow}/etapes`, {
           ...payload,
           type_workflow: typeWorkflow,
           organisation_id: 1, // sera remplacé côté backend
@@ -128,7 +128,7 @@ const GestionWorkflow = () => {
   const handleDelete = async (etape) => {
     if (!window.confirm(t('workflow.deleteConfirm'))) return;
     try {
-      await api.delete(`/workflow/etapes/${etape.id}/`);
+      await api.delete(`/workflow/etapes/${etape.id}`);
       await fetchEtapes();
     } catch (err) {
       alert(err.response?.data?.message || t('workflow.loadError'));

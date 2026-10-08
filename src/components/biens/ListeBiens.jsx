@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import AppPage from '../ui/AppPage';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { biensService } from '../../services/biens';
 import usePermissions from '../../hooks/usePermissions';
 import { useTranslation } from '../../context/LanguageContext';
@@ -63,6 +63,7 @@ const TechnicianModeBanner = () => {
 
 const ListeBiens = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const {
     canViewPurchasePrice,
@@ -99,7 +100,11 @@ const ListeBiens = () => {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
-  const [filters, setFilters] = useState({ search: '', type_bien: '', etat: '' });
+  const [filters, setFilters] = useState({
+    search: '',
+    type_bien: searchParams.get('type_bien') || '',
+    etat: '',
+  });
   const [confirmDelete, setConfirmDelete] = useState({ open: false, id: null, nom: '' });
   const [showInventairePreview, setShowInventairePreview] = useState(false);
   const [inventaireBiens, setInventaireBiens] = useState([]);

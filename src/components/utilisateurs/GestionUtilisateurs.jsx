@@ -75,7 +75,11 @@ const GestionUtilisateurs = () => {
                 { id_role: 3, nom: "COMPTABLE" },
                 { id_role: 4, nom: "TECHNICIEN" },
                 { id_role: 5, nom: "CAISSE" },
-                { id_role: 6, nom: "MAGASINIER" }
+                { id_role: 6, nom: "MAGASINIER" },
+                { id_role: 7, nom: "GESTIONNAIRE" },
+                { id_role: 8, nom: "LOGISTICIEN" },
+                { id_role: 9, nom: "RESPONSABLE_PROJET" },
+                { id_role: 10, nom: "CHAUFFEUR" },
             ]);
         }
     };

@@ -2,7 +2,7 @@
 import React from 'react';
 import { useTranslation } from '../../context/LanguageContext';
 import { formatPrice, formatDate } from '../../utils/formatters';
-import { AppIcon, CheckCircleIcon, XCircleIcon, DocumentTextIcon } from '../ui/icons';
+import { AppIcon, CheckCircleIcon, XCircleIcon, DocumentTextIcon, ExclamationTriangleIcon } from '../ui/icons';
 
 const RapportCloture = ({ result, onClose, onViewEcritures }) => {
     const { t } = useTranslation();

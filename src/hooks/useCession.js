@@ -78,14 +78,10 @@ export const useCession = (options = {}) => {
     }
 
     // Vérifier l'éligibilité avant de continuer
-    try {
-      const elig = await verifierEligibilite(targetId);
-      if (!elig || !elig.est_eligible) {
-        const motifs = elig?.motifs_ineligibilite?.join(', ') || 'Non éligible';
-        throw new Error(`Ce bien n'est pas éligible à la cession: ${motifs}`);
-      }
-    } catch (err) {
-      throw err;
+    const elig = await verifierEligibilite(targetId);
+    if (!elig || !elig.est_eligible) {
+      const motifs = elig?.motifs_ineligibilite?.join(', ') || 'Non éligible';
+      throw new Error(`Ce bien n'est pas éligible à la cession: ${motifs}`);
     }
 
     setSubmitting(true);

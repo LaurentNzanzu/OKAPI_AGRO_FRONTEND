@@ -96,7 +96,9 @@ const DeclarationPanne = () => {
         try {
           html5QrCodeRef.current.stop().catch(() => {});
           html5QrCodeRef.current.clear();
-        } catch (e) {}
+        } catch {
+          // Ignorer si la caméra est déjà arrêtée
+        }
         html5QrCodeRef.current = null;
       }
     };
@@ -243,7 +245,9 @@ const DeclarationPanne = () => {
         try {
           await html5QrCodeRef.current.stop();
           html5QrCodeRef.current.clear();
-        } catch (e) {}
+        } catch {
+          // Ignorer l'erreur d'arrêt préalable de la caméra
+        }
         html5QrCodeRef.current = null;
       }
       html5QrCodeRef.current = new Html5Qrcode(containerId);
@@ -283,7 +287,9 @@ const DeclarationPanne = () => {
         await html5QrCodeRef.current.stop();
         html5QrCodeRef.current.clear();
       }
-    } catch (e) {}
+    } catch {
+      // Ignorer l'erreur d'arrêt lors du succès du scan
+    }
     setIsScanning(false);
     setCameraStarted(false);
     try {

@@ -153,8 +153,8 @@ export const OPTIONS_FREQUENCE_MAINTENANCE = [
 
 export const VALIDATIONS = {
   prix: { min: 0, max: 999999999.99 },
-  immatriculation: { pattern: /^[A-Z0-9\-]{3,20}$/, message: 'Format: AB-123-CD' },
-  numero_serie: { pattern: /^[A-Z0-9\-]{5,50}$/, message: 'Format invalide' },
+  immatriculation: { pattern: /^[A-Z0-9-]{3,20}$/, message: 'Format: AB-123-CD' },
+  numero_serie: { pattern: /^[A-Z0-9-]{5,50}$/, message: 'Format invalide' },
   adresse_ip: { pattern: /^(\d{1,3}\.){3}\d{1,3}$/, message: 'IP invalide' }
 };
 

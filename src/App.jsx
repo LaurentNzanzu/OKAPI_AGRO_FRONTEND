@@ -106,6 +106,9 @@ import {
   ListePermissions,
   GestionPermissionsRole,
   ImportCSV,
+  GestionFlotte,
+  GestionMissions,
+  PlanningFlotte,
 } from './routes/lazyPages';
 
 const Lazy = ({ children }) => (
@@ -256,6 +259,11 @@ function App() {
                   <Route path="projets/:id" element={<Lazy><FicheProjet /></Lazy>} />
                   <Route path="workflow" element={<Lazy><GestionWorkflow /></Lazy>} />
                   <Route path="projets/nouveau" element={<Lazy><NouveauProjet /></Lazy>} />
+                  <Route path="chauffeurs" element={<Lazy><GestionFlotte /></Lazy>} />
+                  <Route path="missions" element={<Lazy><GestionMissions /></Lazy>} />
+                  <Route path="affectations" element={<Lazy><GestionFlotte /></Lazy>} />
+                  <Route path="trajets" element={<Lazy><GestionFlotte /></Lazy>} />
+                  <Route path="planning" element={<Lazy><PlanningFlotte /></Lazy>} />
                   <Route path="permissions" element={<Lazy><ListePermissions /></Lazy>} />
                   <Route path="permissions/roles" element={<Lazy><GestionPermissionsRole /></Lazy>} />
                   <Route path="import" element={<Lazy><ImportCSV /></Lazy>} />

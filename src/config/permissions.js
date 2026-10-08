@@ -31,6 +31,10 @@ export const ROLE_PERMISSIONS = {
     'workflow.gerer',
     'workflow.voir',
     'import.executer',
+    'chauffeurs.view', 'chauffeurs.manage',
+    'missions.view', 'missions.manage',
+    'affectations.view', 'affectations.manage',
+    'trajets.view', 'trajets.manage',
     
   ],
   DG: [
@@ -61,6 +65,7 @@ export const ROLE_PERMISSIONS = {
     'abonnement.voir',
     'facturation.voir',
     'workflow.voir',
+    'chauffeurs.view', 'missions.view', 'affectations.view', 'trajets.view',
   ],
   COMPTABLE: [
     'dashboard.view',
@@ -159,17 +164,39 @@ export const ROLE_PERMISSIONS = {
     'notifications.history.view',
     // ❌ Pas d'accès au plan comptable
   ],
-    RESPONSABLE_PROJET: [
+  RESPONSABLE_PROJET: [
     'dashboard.view',
     'projet.voir',
     'workflow.voir',
     'notifications.view',
     'notifications.history.view',
+    'missions.view',
+    'missions.create',
   ],
   LOGISTICIEN: [
     'dashboard.view',
     'projet.voir',
     'workflow.voir',
+    'notifications.view',
+    'notifications.history.view',
+    'biens.view',
+    'chauffeurs.view',
+    'chauffeurs.manage',
+    'missions.view',
+    'missions.validate_log',
+    'missions.modify',
+    'missions.close',
+    'missions.delete',
+    'affectations.view',
+    'affectations.manage',
+    'trajets.view',
+    'trajets.manage',
+  ],
+  CHAUFFEUR: [
+    'dashboard.view',
+    'missions.view',
+    'trajets.view',
+    'trajets.manage',
     'notifications.view',
     'notifications.history.view',
   ],
@@ -178,6 +205,10 @@ export const ROLE_PERMISSIONS = {
 /** Mapping route → permission minimale requise */
 export const ROUTE_PERMISSIONS = {
   '/dashboard': 'dashboard.view',
+  '/chauffeurs': 'chauffeurs.view',
+  '/missions': 'missions.view',
+  '/affectations': 'affectations.view',
+  '/trajets': 'trajets.view',
   '/scan': 'pieces.view',
   '/utilisateurs': 'users.view',
   '/utilisateurs/permissions': 'users.permissions.manage',
@@ -233,7 +264,8 @@ export const ROUTE_PERMISSIONS = {
   '/profil': 'dashboard.view',
   '/parametres': 'dashboard.view',
   '/prints/fiche-bien': 'biens.view',
-    // === SPRINT 0 — SaaS / Multi-tenant ===
+  // === SPRINT 0 & 1 — Routes SaaS & Flotte ===
+  '/planning': 'missions.view',
   '/organisations': 'organisation.voir',
   '/organisations/nouveau': 'organisation.gerer',
   '/abonnements': 'abonnement.voir',
@@ -241,11 +273,13 @@ export const ROUTE_PERMISSIONS = {
   '/projets': 'projet.voir',
   '/projets/nouveau': 'projet.gerer',
   '/workflow': 'workflow.voir',
-  '/organisations/nouveau': 'organisation.gerer',
-  '/projets/nouveau': 'projet.gerer',
   '/permissions': 'permission.gerer',
   '/permissions/roles': 'permission.gerer',
   '/import': 'import.executer',
+  '/chauffeurs': 'chauffeurs.view',
+  '/missions': 'missions.view',
+  '/affectations': 'affectations.view',
+  '/trajets': 'trajets.view',
 };
 
 const PUBLIC_ROUTES = new Set([
@@ -292,6 +326,35 @@ const LEGACY_ALIASES = {
   create_plan_comptable: 'plan_comptable.create',
   update_plan_comptable: 'plan_comptable.update',
   delete_plan_comptable: 'plan_comptable.delete',
+  // Mappings Flotte granulaires (1-pour-1 strict, sans alias fourre-tout)
+  MISSION_VOIR: 'missions.view',
+  'missions.view': 'MISSION_VOIR',
+  MISSION_CREATE: 'missions.create',
+  'missions.create': 'MISSION_CREATE',
+  MISSION_VALIDATE_LOG: 'missions.validate_log',
+  'missions.validate_log': 'MISSION_VALIDATE_LOG',
+  MISSION_VALIDATE_DG: 'missions.validate_dg',
+  'missions.validate_dg': 'MISSION_VALIDATE_DG',
+  MISSION_VALIDER: 'missions.validate_log',
+  MISSION_AFFECTER: 'affectations.manage',
+  'affectations.manage': 'MISSION_AFFECTER',
+  'affectations.view': 'MISSION_VOIR',
+  MISSION_CLOSE: 'missions.close',
+  'missions.close': 'MISSION_CLOSE',
+  MISSION_MODIFIER: 'missions.modify',
+  'missions.modify': 'MISSION_MODIFIER',
+  MISSION_SUPPRIMER: 'missions.delete',
+  'missions.delete': 'MISSION_SUPPRIMER',
+  VEHICULE_VOIR: 'biens.view',
+  'biens.view': 'VEHICULE_VOIR',
+  CHAUFFEUR_GERER: 'chauffeurs.manage',
+  'chauffeurs.manage': 'CHAUFFEUR_GERER',
+  CHAUFFEUR_VOIR: 'chauffeurs.view',
+  'chauffeurs.view': 'CHAUFFEUR_VOIR',
+  TRAJET_GERER: 'trajets.manage',
+  'trajets.manage': 'TRAJET_GERER',
+  TRAJET_VOIR: 'trajets.view',
+  'trajets.view': 'TRAJET_VOIR',
 };
 
 const matchesPermission = (perms, permission) => {
@@ -312,6 +375,9 @@ export const ROLE_HOME_PATHS = {
   COMPTABLE: ['/dashboard', '/biens', '/amortissements', '/plan-comptable'],
   DG: ['/dashboard', '/rapports/financiers', '/validations'],
   ADMIN: ['/dashboard', '/organisations', '/utilisateurs', '/plan-comptable'],
+  LOGISTICIEN: ['/missions', '/planning', '/dashboard'],
+  RESPONSABLE_PROJET: ['/missions', '/projets', '/dashboard'],
+  CHAUFFEUR: ['/missions', '/trajets', '/dashboard'],
 };
 
 export function userHasPermission(user, permission) {
@@ -430,6 +496,10 @@ export function resolveRoutePermission(pathname) {
   if (pathname.match(/^\/projets\/[^/]+$/)) return 'projet.voir';
   if (pathname.startsWith('/projets')) return 'projet.voir';
   if (pathname.startsWith('/workflow')) return 'workflow.voir';
+  if (pathname.startsWith('/chauffeurs')) return 'chauffeurs.view';
+  if (pathname.startsWith('/missions')) return 'missions.view';
+  if (pathname.startsWith('/affectations')) return 'affectations.view';
+  if (pathname.startsWith('/trajets')) return 'trajets.view';
 
   
 

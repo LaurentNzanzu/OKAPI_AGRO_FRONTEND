@@ -75,7 +75,9 @@ const PlanningMaintenance = () => {
                     try {
                         const maints = await maintenancesService.getByBienId(bien.id_bien);
                         allMaintenances.push(...maints);
-                    } catch (e) { }
+                    } catch {
+                        // Ignorer les erreurs pour les biens sans maintenances
+                    }
                 }
                 data = allMaintenances;
             }

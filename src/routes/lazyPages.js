@@ -122,4 +122,7 @@ export const NouveauProjet = lazy(() => import('../components/projets/NouveauPro
 export const ListePermissions = lazy(() => import('../components/permissions/ListePermissions'));
 export const GestionPermissionsRole = lazy(() => import('../components/permissions/GestionPermissionsRole'));
 export const ImportCSV = lazy(() => import('../components/import/ImportCSV'));
+export const GestionFlotte = lazy(() => import('../components/flotte/GestionFlotte'));
+export const GestionMissions = lazy(() => import('../components/flotte/GestionMissions'));
+export const PlanningFlotte = lazy(() => import('../components/flotte/PlanningFlotte'));
 export const ForceChangePasswordPage = lazy(() => import('../pages/ForceChangePasswordPage'));

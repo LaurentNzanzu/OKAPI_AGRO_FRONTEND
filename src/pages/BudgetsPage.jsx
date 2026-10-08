@@ -22,6 +22,7 @@ import {
   CurrencyDollarIcon,
   ChartBarIcon,
   BuildingOffice2Icon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { AppIcon } from '../components/ui/icons';
 

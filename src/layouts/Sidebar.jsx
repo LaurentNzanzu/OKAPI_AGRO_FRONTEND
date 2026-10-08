@@ -30,6 +30,7 @@ import {
   AdjustmentsHorizontalIcon,
   ShieldCheckIcon,
   ArrowUpTrayIcon,
+  TruckIcon,
 } from '@heroicons/react/24/outline';
 
 const linkBase = 'flex items-center gap-3 rounded-lg text-sm font-medium transition-colors';
@@ -324,6 +325,19 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
       ],
     },
     {
+      labelKey: 'navFleet',
+      icon: TruckIcon,
+      roles: ['ADMIN', 'DG', 'LOGISTICIEN', 'RESPONSABLE_PROJET'],
+      children: [
+        { labelKey: 'navVehicles', path: '/biens', search: '?type_bien=vehicule', module: 'VEHICULE', permission: 'biens.view', roles: ['ADMIN', 'DG', 'LOGISTICIEN'] },
+        { labelKey: 'navDrivers', path: '/chauffeurs', module: 'CHAUFFEUR', permission: 'chauffeurs.view', roles: ['ADMIN', 'DG', 'LOGISTICIEN'] },
+        { labelKey: 'navMissions', path: '/missions', module: 'MISSION', permission: 'missions.view', roles: ['ADMIN', 'DG', 'LOGISTICIEN', 'RESPONSABLE_PROJET'] },
+        { labelKey: 'navAssignments', path: '/affectations', module: 'MISSION', permission: 'affectations.view', roles: ['ADMIN', 'DG', 'LOGISTICIEN'] },
+        { labelKey: 'navPlanning', path: '/planning', module: 'VEHICULE', permission: 'missions.view', roles: ['ADMIN', 'DG', 'LOGISTICIEN', 'RESPONSABLE_PROJET'] },
+        { labelKey: 'navTrips', path: '/trajets', module: 'TRAJET', permission: 'trajets.view', roles: ['ADMIN', 'DG', 'LOGISTICIEN'] },
+      ],
+    },
+    {
       labelKey: 'navWorkflowConfig',
       path: '/workflow',
       icon: AdjustmentsHorizontalIcon,
@@ -421,7 +435,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
                       .map((child, cidx) => (
                         <NavLink
                           key={cidx}
-                          to={child.path}
+                          to={child.search ? { pathname: child.path, search: child.search } : child.path}
                           className={({ isActive }) =>
                             `block px-4 py-2 text-sm ${isActive || isChildActive(child.path)
                               ? 'bg-primary-50 text-primary-600 font-medium dark:bg-night-active-sub dark:text-white'
@@ -496,7 +510,7 @@ const Sidebar = ({ isOpen, setIsOpen, collapsed = false, isLarge = true }) => {
                         .map((child, cidx) => (
                           <NavLink
                             key={cidx}
-                            to={child.path}
+                            to={child.search ? { pathname: child.path, search: child.search } : child.path}
                             onClick={() => !isLarge && setIsOpen(false)}
                             className={({ isActive }) =>
                               isActive || isChildActive(child.path) ? childActive : childInactive
